@@ -660,10 +660,14 @@ window.doEmailAuth = async function() {
   try {
     if(mode === 'signup') {
       if(!displayName){ err.textContent = '表示名を入力してください'; btn.disabled=false; return; }
-      // 名前の重複チェック
-      const nameCheck = query(collection(db, 'users'), where('name', '==', displayName), limit(1));
-      const nameSnap = await getDocs(nameCheck);
-      if(!nameSnap.empty){ err.textContent = 'この名前は既に使われています。別の名前にしてください'; btn.disabled=false; return; }
+      // 名前の重複チェック（大文字小文字・スペース無視）
+      const allUsers = await getDocs(collection(db, 'users'));
+      const normalized = displayName.toLowerCase().replace(/\s/g, '');
+      const dup = allUsers.docs.some(d => {
+        const n = (d.data().name || '').toLowerCase().replace(/\s/g, '');
+        return n === normalized;
+      });
+      if(dup){ err.textContent = 'この名前は既に使われています。別の名前にしてください'; btn.disabled=false; return; }
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(cred.user, { displayName });
       await saveUserProfile(cred.user, displayName, null);
@@ -697,6 +701,9 @@ function getFriendlyError(code) {
     'auth/wrong-password': 'パスワードが違います',
     'auth/invalid-credential': 'メールまたはパスワードが違います',
     'auth/popup-closed-by-user': 'ログインがキャンセルされました',
+    'auth/too-many-requests': 'ログイン試行が多すぎます。しばらく待ってから再試行してください',
+    'auth/network-request-failed': 'ネットワークエラーが発生しました',
+    'permission-denied': 'アクセス権限がありません。再ログインしてください',
   };
   return map[code] || 'エラーが発生しました: ' + code;
 }
@@ -704,16 +711,21 @@ function getFriendlyError(code) {
 async function saveUserProfile(user, displayName, photoURL) {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
   const ref = doc(db, 'users', user.uid);
-  const snap = await getDoc(ref);
-  if(!snap.exists()) {
-    await setDoc(ref, {
-      uid: user.uid,
-      name: displayName || user.email,
-      email: user.email,
-      photoURL: photoURL || null,
-      color: color,
-      createdAt: serverTimestamp()
-    });
+  try {
+    const snap = await getDoc(ref);
+    if(!snap.exists()) {
+      await setDoc(ref, {
+        uid: user.uid,
+        name: displayName || user.email,
+        email: user.email || '',
+        photoURL: photoURL || null,
+        color: color,
+        online: true,
+        createdAt: serverTimestamp()
+      });
+    }
+  } catch(e) {
+    console.warn('saveUserProfile error:', e);
   }
 }
 
@@ -732,8 +744,17 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById('loading-screen').style.display = 'none';
   if(user) {
     currentUser = user;
-    const snap = await getDoc(doc(db, 'users', user.uid));
-    userCache[user.uid] = snap.exists() ? snap.data() : { name: user.displayName || user.email, color: COLORS[0], photoURL: user.photoURL };
+    // トークンを強制リフレッシュしてからFirestoreにアクセス
+    try { await user.getIdToken(true); } catch(e) {}
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      userCache[user.uid] = snap.exists() ? snap.data() : { name: user.displayName || user.email, color: COLORS[0], photoURL: user.photoURL };
+      // プロフィールがなければ作成
+      if(!snap.exists()) await saveUserProfile(user, user.displayName, user.photoURL);
+    } catch(e) {
+      console.warn('Firestore access error:', e);
+      userCache[user.uid] = { name: user.displayName || user.email, color: COLORS[0], photoURL: user.photoURL };
+    }
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     initApp();
@@ -1333,11 +1354,16 @@ window.saveProfile = async function() {
   if(!name) { showToast('名前を入力してください', true); return; }
   const sel = document.querySelector('.color-swatch.selected');
   const color = sel ? sel.style.background : (userCache[currentUser.uid]?.color || COLORS[0]);
-  // 名前の重複チェック（自分以外）
-  if(name !== userCache[currentUser.uid]?.name) {
-    const nameCheck = query(collection(db, 'users'), where('name', '==', name), limit(1));
-    const nameSnap = await getDocs(nameCheck);
-    if(!nameSnap.empty) { showToast('この名前は既に使われています', true); return; }
+  // 名前の重複チェック（大文字小文字・スペース無視、自分以外）
+  if(name.toLowerCase().replace(/\s/g,'') !== (userCache[currentUser.uid]?.name||'').toLowerCase().replace(/\s/g,'')) {
+    const allUsers = await getDocs(collection(db, 'users'));
+    const normalized = name.toLowerCase().replace(/\s/g, '');
+    const dup = allUsers.docs.some(d => {
+      if(d.id === currentUser.uid) return false;
+      const n = (d.data().name || '').toLowerCase().replace(/\s/g, '');
+      return n === normalized;
+    });
+    if(dup) { showToast('この名前は既に使われています', true); return; }
   }
   await updateDoc(doc(db, 'users', currentUser.uid), { name, color });
   await updateProfile(currentUser, { displayName: name });
