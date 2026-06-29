@@ -284,6 +284,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .offline-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
 .member-dot.offline{background:var(--muted);}
 
+/* header room code + member avatars inline */
+.chat-header-title{flex:1;min-width:0;}
+.chat-header-name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.chat-header-name{font-size:15px;font-weight:700;white-space:nowrap;}
+.room-code-inline{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 6px;}
+.room-code-text{font-size:10px;font-family:monospace;color:var(--accent2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.room-code-copy{background:none;border:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;padding:1px;transition:color .15s;}
+.room-code-copy:hover{color:var(--accent);}
+.header-member-avatars{display:flex;align-items:center;gap:3px;flex-wrap:nowrap;}
+.hma-wrap{position:relative;flex-shrink:0;}
+.hma{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden;border:2px solid transparent;transition:border-color .2s;}
+.hma img{width:100%;height:100%;object-fit:cover;}
+.hma.status-online{border-color:#4ade80;}
+.hma.status-typing{border-color:#60a5fa;}
+.hma.status-offline{border-color:#6b7280;}
+.hma-more{width:22px;height:22px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);font-size:9px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;}
+
 /* pinned message */
 .pinned-bar{display:flex;align-items:center;gap:8px;padding:6px 22px;background:var(--accent-glow);border-bottom:1px solid var(--border);font-size:12px;color:var(--accent2);cursor:pointer;}
 .pinned-bar:hover{background:var(--surface2);}
@@ -300,7 +317,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .room-color-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .15s,border-color .15s;}
 .room-color-swatch:hover{transform:scale(1.18);}
 .room-color-swatch.selected{border-color:var(--text);}
-.room-icon-input{font-size:22px;text-align:center;width:52px;padding:6px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);outline:none;}
 
 @media(max-width:720px){#sidebar{width:200px;min-width:200px;}#members-panel{display:none!important;}.auth-card{width:95vw;padding:26px 16px;}.account-inner{padding:18px 12px;}}
 </style>
@@ -390,16 +406,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
       <div class="chat-header">
         <div class="chat-header-top">
           <div class="chat-header-icon" id="ch-icon"></div>
-          <div>
-            <div class="chat-header-name" id="ch-name"></div>
+          <div class="chat-header-title">
+            <div class="chat-header-name-row">
+              <span class="chat-header-name" id="ch-name"></span>
+              <span class="room-code-inline" id="room-code-inline" style="display:none">
+                <span class="room-code-text" id="room-code-text"></span>
+                <button class="room-code-copy" onclick="copyCurrentRoomId()" title="参加コードをコピー">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                </button>
+              </span>
+              <div class="header-member-avatars" id="header-member-avatars"></div>
+            </div>
             <div class="chat-header-desc" id="ch-desc"></div>
           </div>
           <div class="chat-header-actions">
             <button class="icon-btn" onclick="openSearch()" title="検索">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </button>
-            <button class="icon-btn" onclick="createInviteLink()" title="招待リンク（24時間）">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
             </button>
             <button class="icon-btn" onclick="shareRoom()" title="リンクをコピー">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -409,13 +431,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
             </button>
           </div>
         </div>
-      </div>
-      <div class="room-id-bar" id="room-id-bar" style="display:none">
-        <span class="room-id-label">ID</span>
-        <span class="room-id-value" id="room-id-value"></span>
-        <button class="room-id-copy" onclick="copyCurrentRoomId()" title="IDをコピー">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        </button>
       </div>
       <div id="messages"></div>
       <div class="typing-indicator" id="typing-indicator"></div>
@@ -429,7 +444,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
       <div class="input-area">
         <div class="input-wrap">
           <textarea id="msg-input" rows="1" placeholder="メッセージを入力… (Enterで送信)"></textarea>
-          <button class="icon-btn" onclick="openStampPicker()" title="スタンプ" style="color:var(--muted);padding:4px;">
+          <button class="icon-btn" onclick="openStampPicker(event)" title="スタンプ" style="color:var(--muted);padding:4px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
           </button>
           <button class="send-btn" onclick="sendMessage()">
@@ -706,6 +721,9 @@ window.logout = async function() {
   if(unsubMessages) unsubMessages();
   if(unsubRooms) unsubRooms();
   if(unsubDMs) unsubDMs();
+  if(unsubTyping) unsubTyping();
+  if(unsubHeaderMembers) unsubHeaderMembers();
+  if(currentUser) await updateDoc(doc(db, 'users', currentUser.uid), { online: false }).catch(()=>{});
   await signOut(auth);
 };
 
@@ -848,6 +866,7 @@ async function openRoom(id, type) {
   cv.style.flexDirection = 'column'; cv.style.overflow = 'hidden';
 
   const idBar = document.getElementById('room-id-bar');
+  if(idBar) idBar.style.display = 'none';
   if(type === 'room') {
     const snap = await getDoc(doc(db, 'rooms', id));
     if(!snap.exists()) return;
@@ -855,8 +874,10 @@ async function openRoom(id, type) {
     document.getElementById('ch-icon').innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>';
     document.getElementById('ch-name').textContent = r.name;
     document.getElementById('ch-desc').textContent = r.desc || '';
-    document.getElementById('room-id-value').textContent = id;
-    idBar.style.display = 'flex';
+    document.getElementById('room-code-text').textContent = id;
+    document.getElementById('room-code-inline').style.display = 'flex';
+    if(r.pinnedMsg) renderPinnedBar(r.pinnedMsg);
+    else { const pb = document.getElementById('pinned-bar'); if(pb) pb.style.display = 'none'; }
     listenMembers(id);
   } else {
     const snap = await getDoc(doc(db, 'dms', id));
@@ -866,11 +887,13 @@ async function openRoom(id, type) {
     document.getElementById('ch-icon').innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>';
     document.getElementById('ch-name').textContent = ou.name;
     document.getElementById('ch-desc').textContent = 'ダイレクトメッセージ';
-    idBar.style.display = 'none';
+    document.getElementById('room-code-inline').style.display = 'none';
     document.getElementById('member-list').innerHTML = '';
   }
   listenMessages(id, type);
   listenTyping(id, type);
+  if(type === 'room') listenHeaderMembers(id);
+  else document.getElementById('header-member-avatars').innerHTML = '';
   document.getElementById('msg-input').focus();
   // notify permission
   if(Notification.permission === 'default') Notification.requestPermission();
@@ -1491,23 +1514,78 @@ async function handleInviteLink(inviteId) {
   showToast(room.name + 'に参加しました');
 }
 
-// ===== STAMPS =====
+// ===== HEADER MEMBER AVATARS (リアルタイム) =====
+let unsubHeaderMembers = null;
+function listenHeaderMembers(roomId) {
+  if(unsubHeaderMembers) unsubHeaderMembers();
+  const roomRef = doc(db, 'rooms', roomId);
+  unsubHeaderMembers = onSnapshot(roomRef, async snap => {
+    if(!snap.exists()) return;
+    const data = snap.data();
+    const members = data.members || [];
+    const typing = data.typing || {};
+    const now = Date.now();
+    // 各メンバーの状態を取得
+    const memberStatuses = [];
+    for(const uid of members) {
+      const uSnap = await getDoc(doc(db, 'users', uid));
+      const u = uSnap.exists() ? uSnap.data() : { name: uid, color: COLORS[0], photoURL: null, online: false };
+      userCache[uid] = u;
+      const tsMs = typing[uid]?.toMillis ? typing[uid].toMillis() : 0;
+      const isTyping = uid !== currentUser.uid && now - tsMs < 3000;
+      const isOnline = u.online === true;
+      let status = 'offline';
+      if(isTyping) status = 'typing';
+      else if(isOnline) status = 'online';
+      memberStatuses.push({ uid, u, status });
+    }
+    // 並び順: online → typing → offline
+    const order = { online: 0, typing: 1, offline: 2 };
+    memberStatuses.sort((a, b) => order[a.status] - order[b.status]);
+    const container = document.getElementById('header-member-avatars');
+    container.innerHTML = '';
+    const show = memberStatuses.slice(0, 5);
+    const rest = memberStatuses.length - show.length;
+    show.forEach(({ uid, u, status }) => {
+      const wrap = document.createElement('div'); wrap.className = 'hma-wrap';
+      const av = document.createElement('div'); av.className = 'hma status-' + status;
+      av.title = u.name + (status === 'online' ? ' (オンライン)' : status === 'typing' ? ' (入力中)' : ' (オフライン)');
+      if(u.photoURL) { const img = document.createElement('img'); img.src = u.photoURL; av.appendChild(img); }
+      else { av.style.background = u.color; av.textContent = u.name[0].toUpperCase(); }
+      wrap.appendChild(av);
+      container.appendChild(wrap);
+    });
+    if(rest > 0) {
+      const more = document.createElement('div'); more.className = 'hma-more';
+      more.textContent = '+' + rest;
+      container.appendChild(more);
+    }
+  });
+}
+
+// ===== STAMPS (修正版) =====
 const STAMPS = ['🎉','🎊','👏','🙌','💪','🤝','👋','✌️','🤞','💯','🔥','⭐','💫','🌟','❤️','💙','💚','💛','🧡','💜','😀','😂','🥹','😎','🤔','😴','🥳','🤩','😍','🥰'];
-window.openStampPicker = function() {
+window.openStampPicker = function(e) {
+  e.stopPropagation();
   document.querySelectorAll('.stamp-picker').forEach(p => p.remove());
   const picker = document.createElement('div');
   picker.className = 'stamp-picker emoji-picker';
-  picker.style.cssText = 'position:fixed;bottom:80px;right:30px;width:240px;z-index:100;';
+  picker.style.cssText = 'position:fixed;bottom:80px;right:80px;width:240px;z-index:100;';
   STAMPS.forEach(s => {
     const b = document.createElement('button'); b.className = 'emoji-opt'; b.textContent = s;
-    b.onclick = () => {
+    b.onclick = (ev) => {
+      ev.stopPropagation();
       const inp = document.getElementById('msg-input');
       inp.value += s; inp.focus(); picker.remove();
     };
     picker.appendChild(b);
   });
   document.body.appendChild(picker);
-  setTimeout(() => document.addEventListener('click', () => picker.remove(), { once: true }), 0);
+  setTimeout(() => {
+    document.addEventListener('click', function handler() {
+      picker.remove(); document.removeEventListener('click', handler);
+    });
+  }, 0);
 };
 window.openModal = function(id) { document.getElementById(id).classList.add('show'); };
 window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
