@@ -336,8 +336,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
       ChatSpace
     </div>
     <div class="auth-sub">チームと繋がる、グループで話す</div>
-
-    <!-- 名前＋パスワード -->
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchTab('login')">ログイン</button>
       <button class="auth-tab" onclick="switchTab('signup')">新規登録</button>
@@ -347,54 +345,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
       <input type="text" id="auth-display-name" placeholder="あなたの名前">
     </div>
     <div class="field">
-      <label>名前</label>
-      <input type="text" id="auth-name" placeholder="あなたの名前">
+      <label>メールアドレス</label>
+      <input type="email" id="auth-email" placeholder="you@example.com">
     </div>
     <div class="field">
       <label>パスワード</label>
       <input type="password" id="auth-pass" placeholder="6文字以上">
     </div>
     <div class="auth-err" id="auth-err"></div>
-    <button class="btn-primary" id="auth-btn" onclick="doNameAuth()">ログイン</button>
-
+    <button class="btn-primary" id="auth-btn" onclick="doEmailAuth()">ログイン</button>
     <div class="auth-divider">
       <div class="auth-divider-line"></div>
       <div class="auth-divider-text">または</div>
       <div class="auth-divider-line"></div>
     </div>
-
-    <!-- メールアドレス＋パスワード -->
-    <button class="btn-google" onclick="toggleEmailForm()" id="email-toggle-btn" style="margin-bottom:8px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      メールアドレスでログイン
-    </button>
-    <div id="email-form" style="display:none">
-      <div class="field">
-        <label>メールアドレス</label>
-        <input type="email" id="auth-email" placeholder="you@example.com">
-      </div>
-      <div class="field" id="email-signup-name-field" style="display:none">
-        <label>表示名</label>
-        <input type="text" id="auth-email-display-name" placeholder="あなたの名前">
-      </div>
-      <div class="field">
-        <label>パスワード</label>
-        <input type="password" id="auth-email-pass" placeholder="6文字以上">
-      </div>
-      <div class="auth-err" id="auth-email-err"></div>
-      <button class="btn-primary" id="auth-email-btn" onclick="doEmailAuth()" style="margin-bottom:8px;">メールでログイン</button>
-      <div style="text-align:center;font-size:12px;color:var(--muted);">
-        <span onclick="toggleEmailSignup()" style="cursor:pointer;color:var(--accent);">アカウントを新規登録する場合はこちら</span>
-      </div>
-    </div>
-
-    <div class="auth-divider">
-      <div class="auth-divider-line"></div>
-      <div class="auth-divider-text">または</div>
-      <div class="auth-divider-line"></div>
-    </div>
-
-    <!-- Google -->
     <button class="btn-google" id="google-btn" onclick="doGoogleAuth()">
       <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
       Googleでログイン
@@ -678,86 +642,29 @@ setInterval(() => { if(getTheme() === 'auto') setTheme('auto'); }, 3600000);
 window.switchTab = function(mode) {
   document.querySelectorAll('.auth-tab').forEach((t,i) =>
     t.classList.toggle('active', (mode==='login'&&i===0)||(mode==='signup'&&i===1)));
-  document.getElementById('auth-btn').textContent = mode==='login' ? 'ログイン' : '新規登録';
+  document.getElementById('display-name-field').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('auth-btn').textContent = mode==='login' ? 'ログイン' : '登録する';
   document.getElementById('auth-btn').dataset.mode = mode;
   document.getElementById('auth-err').textContent = '';
 };
 document.getElementById('auth-btn').dataset.mode = 'login';
 
-window.toggleEmailForm = function() {
-  const f = document.getElementById('email-form');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
-};
-
-let emailFormMode = 'login';
-window.toggleEmailSignup = function() {
-  emailFormMode = emailFormMode === 'login' ? 'signup' : 'login';
-  document.getElementById('auth-email-btn').textContent = emailFormMode === 'login' ? 'メールでログイン' : 'メールで登録';
-  document.getElementById('email-signup-name-field').style.display = emailFormMode === 'signup' ? 'block' : 'none';
-  document.getElementById('auth-email-err').textContent = '';
-};
-
-// ===== 名前＋パスワード認証 =====
-window.doNameAuth = async function() {
+// ===== メール＋パスワード認証 =====
+window.doEmailAuth = async function() {
   const mode = document.getElementById('auth-btn').dataset.mode;
-  const name = document.getElementById('auth-name').value.trim();
+  const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
+  const displayName = document.getElementById('auth-display-name').value.trim();
   const err = document.getElementById('auth-err');
   const btn = document.getElementById('auth-btn');
-  if(!name || !pass){ err.textContent = '名前とパスワードを入力してください'; return; }
-  if(pass.length < 6){ err.textContent = 'パスワードは6文字以上にしてください'; return; }
-  // 内部メールアドレスを名前から生成
-  const internalEmail = 'name_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '@chatspace.internal';
-  btn.disabled = true;
-  try {
-    if(mode === 'signup') {
-      const cred = await createUserWithEmailAndPassword(auth, internalEmail, pass);
-      await updateProfile(cred.user, { displayName: name });
-      await cred.user.getIdToken(true);
-      // 名前重複チェック
-      const allUsers = await getDocs(collection(db, 'users'));
-      const normalized = name.toLowerCase().replace(/\s/g, '');
-      const dup = allUsers.docs.some(d => {
-        if(d.id === cred.user.uid) return false;
-        return (d.data().name||'').toLowerCase().replace(/\s/g,'') === normalized;
-      });
-      if(dup) {
-        await deleteUser(cred.user);
-        err.textContent = 'この名前は既に使われています';
-        btn.disabled = false; return;
-      }
-      await saveUserProfile(cred.user, name, null);
-    } else {
-      await signInWithEmailAndPassword(auth, internalEmail, pass);
-    }
-  } catch(e) {
-    if(e.code === 'auth/email-already-in-use') {
-      err.textContent = 'この名前は既に登録されています';
-    } else if(e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
-      err.textContent = '名前またはパスワードが違います';
-    } else {
-      err.textContent = getFriendlyError(e.code);
-    }
-    btn.disabled = false;
-  }
-};
-
-// ===== メールアドレス＋パスワード認証 =====
-window.doEmailAuth = async function() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-email-pass').value;
-  const displayName = document.getElementById('auth-email-display-name').value.trim();
-  const err = document.getElementById('auth-email-err');
-  const btn = document.getElementById('auth-email-btn');
   if(!email || !pass){ err.textContent = 'メールとパスワードを入力してください'; return; }
   btn.disabled = true;
   try {
-    if(emailFormMode === 'signup') {
+    if(mode === 'signup') {
       if(!displayName){ err.textContent = '表示名を入力してください'; btn.disabled=false; return; }
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(cred.user, { displayName });
       await cred.user.getIdToken(true);
-      // 名前重複チェック
       const allUsers = await getDocs(collection(db, 'users'));
       const normalized = displayName.toLowerCase().replace(/\s/g, '');
       const dup = allUsers.docs.some(d => {
@@ -1739,11 +1646,7 @@ mi.addEventListener('input', function() {
   sendTyping();
 });
 mi.addEventListener('keydown', function(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); } });
-['auth-name','auth-pass'].forEach(id => {
-  const el = document.getElementById(id);
-  if(el) el.addEventListener('keydown', e => { if(e.key === 'Enter') window.doNameAuth(); });
-});
-['auth-email','auth-email-pass','auth-email-display-name'].forEach(id => {
+['auth-email','auth-pass','auth-display-name'].forEach(id => {
   const el = document.getElementById(id);
   if(el) el.addEventListener('keydown', e => { if(e.key === 'Enter') window.doEmailAuth(); });
 });
