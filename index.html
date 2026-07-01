@@ -164,6 +164,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 /* read receipts */
 .read-receipt{font-size:10px;color:var(--muted);text-align:right;margin-top:1px;}
 
+/* scroll to bottom button */
+.scroll-bottom-btn{position:absolute;bottom:90px;right:30px;width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 12px var(--shadow);transition:all .2s;z-index:10;}
+.scroll-bottom-btn.show{display:flex;}
+.scroll-bottom-btn:hover{background:var(--accent2);transform:scale(1.08);}
+.scroll-bottom-btn .unread-count{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+
+/* context menu */
+.ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:5px;min-width:160px;box-shadow:0 4px 20px var(--shadow);z-index:300;}
+.ctx-item{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text);transition:background .12s;}
+.ctx-item:hover{background:var(--surface2);}
+.ctx-item.danger{color:var(--red);}
+.ctx-item svg{flex-shrink:0;color:var(--muted);}
+.ctx-item.danger svg{color:var(--red);}
+.ctx-divider{height:1px;background:var(--border);margin:4px 0;}
+
+/* user color highlight for messages */
+.msg-bubble-colored{border-radius:4px 13px 13px 13px;padding:7px 11px;display:inline-block;max-width:460px;word-break:break-word;font-size:13.5px;line-height:1.6;}
+
 /* typing */
 .typing-indicator{padding:4px 22px 6px;font-size:12px;color:var(--muted);min-height:20px;display:flex;align-items:center;gap:6px;}
 .typing-dots{display:flex;gap:3px;}
@@ -320,6 +338,70 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 
 @media(max-width:720px){#sidebar{width:200px;min-width:200px;}#members-panel{display:none!important;}.auth-card{width:95vw;padding:26px 16px;}.account-inner{padding:18px 12px;}}
 
+/* ===== MOBILE LAYOUT ===== */
+@media(max-width:600px){
+  /* サイドバーをオーバーレイに */
+  #sidebar{
+    position:fixed;left:0;top:0;bottom:0;z-index:150;
+    width:280px;min-width:280px;
+    transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow:4px 0 20px var(--shadow);
+  }
+  #sidebar.mobile-open{transform:translateX(0);}
+  /* オーバーレイ背景 */
+  #sidebar-overlay{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140;
+  }
+  #sidebar-overlay.show{display:block;}
+  /* メインを全幅に */
+  #app{flex-direction:column;}
+  #main{width:100%;flex:1;}
+  #members-panel{display:none!important;}
+  /* ヘッダーにハンバーガーボタン追加 */
+  .mobile-menu-btn{
+    display:flex;width:36px;height:36px;border-radius:8px;
+    background:none;border:none;color:var(--text);cursor:pointer;
+    align-items:center;justify-content:center;flex-shrink:0;
+  }
+  /* ヘッダーをスマホ用に */
+  .chat-header{padding:10px 14px 8px;}
+  .chat-header-name{font-size:14px;}
+  .chat-header-desc{display:none;}
+  /* ルームコードとアバターを非表示 */
+  .room-code-inline{display:none!important;}
+  .header-member-avatars{display:none!important;}
+  /* アクションボタンを減らす */
+  .chat-header-actions .icon-btn:not(:last-child):not(:nth-last-child(2)){display:none;}
+  /* メッセージ欄のパディング調整 */
+  #messages{padding:12px 10px;}
+  .msg-bubble,.msg-own-bubble{max-width:calc(100vw - 100px);}
+  /* 入力欄 */
+  .input-area{padding:6px 10px 10px;}
+  .input-wrap{padding:8px 10px;}
+  #msg-input{font-size:16px;} /* iOSズーム防止 */
+  /* スクロールボタン */
+  .scroll-bottom-btn{bottom:70px;right:14px;}
+  /* サイドバー内のフッター */
+  .sidebar-footer{padding:12px;}
+  /* 空の状態 */
+  #empty-state{padding:20px;}
+  .empty-title{font-size:16px;}
+  /* アカウントページ */
+  .account-inner{padding:14px 12px;}
+  /* モーダル */
+  .modal{width:95vw;padding:20px 16px;}
+  /* トースト */
+  .toast{bottom:70px;width:90vw;justify-content:center;}
+  /* 認証画面 */
+  .auth-card{width:95vw;padding:28px 18px;margin:16px;}
+  /* ルームIDバー */
+  .room-id-bar{padding:4px 14px 5px;}
+}
+/* ハンバーガーボタンはPCでは非表示 */
+.mobile-menu-btn{display:none;}
+
+
 /* ===== URL PREVIEW ===== */
 .url-preview{margin-top:6px;border:1px solid var(--border);border-radius:10px;overflow:hidden;max-width:360px;cursor:pointer;transition:border-color .2s;}
 .url-preview:hover{border-color:var(--accent);}
@@ -420,6 +502,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 
 <!-- APP -->
 <div id="app" style="display:none">
+  <!-- モバイル用サイドバーオーバーレイ -->
+  <div id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
   <div id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">ChatSpace</div>
@@ -447,6 +531,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 
   <div id="main">
     <div id="empty-state">
+      <div style="position:absolute;top:14px;left:14px;">
+        <button class="mobile-menu-btn" onclick="openMobileSidebar()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       </div>
@@ -457,6 +546,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
     <div id="chat-view" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
       <div class="chat-header">
         <div class="chat-header-top">
+          <button class="mobile-menu-btn" onclick="openMobileSidebar()" title="メニュー">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <div class="chat-header-icon" id="ch-icon"></div>
           <div class="chat-header-title">
             <div class="chat-header-name-row">
@@ -487,7 +579,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
           </div>
         </div>
       </div>
-      <div id="messages"></div>
+      <div id="messages" style="position:relative;"></div>
+      <button class="scroll-bottom-btn" id="scroll-bottom-btn" onclick="scrollToBottom()" title="最新へ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
       <div class="typing-indicator" id="typing-indicator"></div>
       <div class="reply-bar" id="reply-bar" style="display:none">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>
@@ -941,11 +1036,14 @@ function listenRooms() {
       e.textContent = '+ でルームを作るか、鍵アイコンでIDを入力して参加しよう';
       rl.appendChild(e); return;
     }
-    snap.forEach(d => {
-      const r = d.data();
+    // 最新メッセージ順にソート
+    const rooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    sortRoomsByLatest(rooms);
+    rooms.forEach(r => {
       const div = document.createElement('div');
-      div.className = 'room-item' + (currentRoom === d.id && currentRoomType === 'room' ? ' active' : '');
-      div.onclick = () => openRoom(d.id, 'room');
+      div.className = 'room-item' + (currentRoom === r.id && currentRoomType === 'room' ? ' active' : '');
+      div.dataset.roomId = r.id;
+      div.onclick = () => openRoom(r.id, 'room');
       div.innerHTML = '<span class="room-hash">#</span><span class="room-name">' + escH(r.name) + '</span>';
       rl.appendChild(div);
     });
@@ -976,6 +1074,7 @@ async function openRoom(id, type) {
   currentRoom = id; currentRoomType = type;
   if(unsubMessages) unsubMessages();
   cancelReply();
+  closeMobileSidebar(); // スマホでルーム選択時にサイドバーを閉じる
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('account-page').style.display = 'none';
   const cv = document.getElementById('chat-view');
@@ -1011,6 +1110,7 @@ async function openRoom(id, type) {
   listenTyping(id, type);
   if(type === 'room') listenHeaderMembers(id);
   else document.getElementById('header-member-avatars').innerHTML = '';
+  initScrollButton();
   document.getElementById('msg-input').focus();
   // notify permission
   if(Notification.permission === 'default') Notification.requestPermission();
@@ -1058,7 +1158,9 @@ function listenMessages(roomId, type) {
         authorSpan.onclick = (e) => window.showProfilePopup(msg.author, e);
         const timeSpan = document.createElement('span'); timeSpan.className = 'msg-time'; timeSpan.textContent = fmtTime(msg.ts);
         meta.appendChild(authorSpan); meta.appendChild(timeSpan);
-        const bubble = document.createElement('div'); bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
+        const bubble = document.createElement('div');
+        bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
+        if(!own) bubble.style.background = getUserHighlightColor(u.color || '#888');
         bubble.textContent = msg.deleted ? '(削除済み)' : msg.text;
         if(msg.edited && !msg.deleted) { const ed = document.createElement('span'); ed.className = 'msg-edited'; ed.textContent = '(編集済み)'; bubble.appendChild(ed); }
         ct.appendChild(meta); ct.appendChild(bubble);
@@ -1093,6 +1195,8 @@ function listenMessages(roomId, type) {
         wrap.appendChild(cont); wrap.appendChild(actions);
       }
       container.appendChild(wrap);
+      // 右クリックメニュー
+      wrap.addEventListener('contextmenu', e => showContextMenu(e, msg, d.id, type, own));
       prev = msg.author;
     }
     if(atBot) container.scrollTop = container.scrollHeight;
@@ -1314,22 +1418,30 @@ window.createRoom = async function() {
   const name = document.getElementById('room-name-input').value.trim();
   const desc = document.getElementById('room-desc-input').value.trim();
   if(!name) return;
-  const id = 'room-' + name.toLowerCase().replace(/[^\w]/g,'-').replace(/-+/g,'-').slice(0,20) + '-' + Date.now();
-  await setDoc(doc(db, 'rooms', id), {
-    id, name, desc,
+  // 6桁数字のルームコードを生成（重複チェック付き）
+  let code;
+  let attempts = 0;
+  do {
+    code = Math.floor(100000 + Math.random() * 900000).toString();
+    const existing = await getDoc(doc(db, 'rooms', code));
+    if(!existing.exists()) break;
+    attempts++;
+  } while(attempts < 10);
+  await setDoc(doc(db, 'rooms', code), {
+    id: code, name, desc,
     members: [currentUser.uid],
     createdBy: currentUser.uid,
     createdAt: serverTimestamp(),
     lastMsg: '', lastMsgTs: serverTimestamp()
   });
-  await addDoc(collection(db, 'rooms', id, 'messages'), {
+  await addDoc(collection(db, 'rooms', code, 'messages'), {
     type: 'system', text: userCache[currentUser.uid]?.name + 'がルームを作成しました',
     ts: serverTimestamp(), readBy: [], reactions: {}
   });
   closeModal('room-modal');
   document.getElementById('room-name-input').value = '';
   document.getElementById('room-desc-input').value = '';
-  openRoom(id, 'room');
+  openRoom(code, 'room');
 };
 
 // ===== JOIN ROOM =====
@@ -1740,7 +1852,81 @@ window.openStampPicker = function(e) {
     });
   }, 0);
 };
-// ===== BOOKMARK =====
+// ===== MOBILE SIDEBAR =====
+window.openMobileSidebar = function() {
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('sidebar-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+};
+window.closeMobileSidebar = function() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+};
+
+// ===== SCROLL TO BOTTOM =====
+window.scrollToBottom = function() {
+  const c = document.getElementById('messages');
+  c.scrollTop = c.scrollHeight;
+  document.getElementById('scroll-bottom-btn').classList.remove('show');
+};
+
+function initScrollButton() {
+  const c = document.getElementById('messages');
+  const btn = document.getElementById('scroll-bottom-btn');
+  c.addEventListener('scroll', () => {
+    const atBot = c.scrollHeight - c.scrollTop - c.clientHeight < 100;
+    btn.classList.toggle('show', !atBot);
+  });
+}
+
+// ===== CONTEXT MENU =====
+function showContextMenu(e, msg, msgId, type, own) {
+  e.preventDefault();
+  document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
+  const menu = document.createElement('div'); menu.className = 'ctx-menu';
+  const items = [
+    { icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>', label: 'コピー', action: () => navigator.clipboard.writeText(msg.text).then(() => showToast('コピーしました')) },
+    { icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>', label: '返信', action: () => setReply(msgId, msg.text) },
+    { icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>', label: isMessageBookmarked(msgId) ? 'ブックマーク解除' : 'ブックマーク', action: () => toggleBookmark(msgId, msg.text, msg.author) },
+  ];
+  if(own) {
+    items.push({ divider: true });
+    items.push({ icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: '編集', action: () => startEdit(msgId, msg.text, type) });
+    items.push({ icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>', label: '削除', action: () => deleteMessage(msgId, type), danger: true });
+  }
+  items.forEach(item => {
+    if(item.divider) { const d = document.createElement('div'); d.className = 'ctx-divider'; menu.appendChild(d); return; }
+    const el = document.createElement('div'); el.className = 'ctx-item' + (item.danger ? ' danger' : '');
+    el.innerHTML = item.icon + '<span>' + item.label + '</span>';
+    el.onclick = () => { item.action(); menu.remove(); };
+    menu.appendChild(el);
+  });
+  const x = Math.min(e.clientX, window.innerWidth - 180);
+  const y = Math.min(e.clientY, window.innerHeight - 200);
+  menu.style.left = x + 'px'; menu.style.top = y + 'px';
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
+}
+
+// ===== USER COLOR HIGHLIGHT =====
+function getUserHighlightColor(color) {
+  // カラーを薄くしてマーカー風にする
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.slice(0,2),16);
+  const g = parseInt(hex.slice(2,4),16);
+  const b = parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},0.15)`;
+}
+
+// ===== ROOM SORT BY LATEST MESSAGE =====
+function sortRoomsByLatest(rooms) {
+  return rooms.sort((a, b) => {
+    const tsA = a.lastMsgTs?.toMillis ? a.lastMsgTs.toMillis() : 0;
+    const tsB = b.lastMsgTs?.toMillis ? b.lastMsgTs.toMillis() : 0;
+    return tsB - tsA;
+  });
+}
 function getBookmarks() {
   try { return JSON.parse(localStorage.getItem('cs_bookmarks') || '[]'); } catch(e) { return []; }
 }
