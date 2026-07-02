@@ -771,6 +771,8 @@ import { getFirestore, collection, doc, setDoc, getDoc, getDocs,
   addDoc, onSnapshot, query, orderBy, serverTimestamp,
   updateDoc, arrayUnion, arrayRemove, deleteDoc, where, limit }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getMessaging, getToken, onMessage }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js';
 
 // ===== FIREBASE CONFIG =====
 const firebaseConfig = {
@@ -786,6 +788,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
+const messaging = getMessaging(app);
+const VAPID_KEY = 'BFUPo_ieRYgmkTzUA3hRMZTooyvC68Ppzlv1p0lp1fEUbAXe8UQKLUUoWHigILXPOHUSmutXrHoUefy8xCnDIQw';
 
 // ===== STATE =====
 const COLORS = ['#7c6af7','#f472b6','#34d399','#fb923c','#60a5fa','#a78bfa','#f59e0b','#10b981','#ef4444','#06b6d4'];
@@ -926,6 +930,8 @@ window.logout = async function() {
   if(unsubDMs) unsubDMs();
   if(unsubTyping) unsubTyping();
   if(unsubHeaderMembers) unsubHeaderMembers();
+  globalNotifUnsubs.forEach(u => { if(typeof u === 'function') u(); });
+  globalNotifUnsubs = [];
   if(currentUser) await updateDoc(doc(db, 'users', currentUser.uid), { online: false }).catch(()=>{});
   await signOut(auth);
 };
@@ -968,12 +974,111 @@ function initApp() {
   listenRooms();
   listenDMs();
   setOnline();
+  // 初ログイン時に通知許可を要求
+  requestNotificationPermission();
+  // グローバル通知リスナー起動
+  startGlobalNotificationListener();
+  // 未読バッジリスナー起動
+  initUnreadListener();
   const params = new URLSearchParams(location.search);
   const sr = params.get('room');
   if(sr) openRoom(sr, 'room');
-  // 招待リンクチェック
   const inv = params.get('invite');
   if(inv) handleInviteLink(inv);
+}
+
+// ===== NOTIFICATION PERMISSION =====
+async function requestNotificationPermission() {
+  if(Notification.permission === 'default') {
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted') showToast('通知が有効になりました');
+  }
+}
+
+// ===== GLOBAL NOTIFICATION LISTENER =====
+// 全ルーム・全DMを監視して通知を送る
+let globalNotifUnsubs = [];
+let lastNotifTs = Date.now(); // 起動前のメッセージは通知しない
+
+function startGlobalNotificationListener() {
+  // 既存リスナーをクリア
+  globalNotifUnsubs.forEach(u => u());
+  globalNotifUnsubs = [];
+
+  if(Notification.permission !== 'granted') return;
+
+  // ルームの監視
+  const roomsQ = query(collection(db, 'rooms'), where('members', 'array-contains', currentUser.uid));
+  const unsubR = onSnapshot(roomsQ, async roomsSnap => {
+    for(const roomDoc of roomsSnap.docs) {
+      const roomId = roomDoc.id;
+      // すでに監視中なら飛ばす
+      if(globalNotifUnsubs['room_' + roomId]) continue;
+      const msgsQ = query(
+        collection(db, 'rooms', roomId, 'messages'),
+        orderBy('ts', 'desc'),
+        limit(1)
+      );
+      const unsub = onSnapshot(msgsQ, async snap => {
+        if(snap.empty) return;
+        const msg = snap.docs[0].data();
+        if(!msg.ts) return;
+        const msgTs = msg.ts.toMillis ? msg.ts.toMillis() : 0;
+        // 自分のメッセージ・起動前・今開いているルームは通知しない
+        if(msg.author === currentUser.uid) return;
+        if(msgTs <= lastNotifTs) return;
+        if(currentRoom === roomId && !document.hidden) return;
+        if(msg.type === 'system') return;
+        const u = await getUser(msg.author);
+        const r = roomDoc.data();
+        new Notification(r.name + ' — ' + u.name, {
+          body: msg.text,
+          icon: u.photoURL || '/chat-app/icon-192.png',
+          tag: 'msg_' + roomId,
+          renotify: true
+        });
+        lastNotifTs = msgTs;
+      });
+      globalNotifUnsubs['room_' + roomId] = unsub;
+      globalNotifUnsubs.push(unsub);
+    }
+  });
+  globalNotifUnsubs.push(unsubR);
+
+  // DMの監視
+  const dmsQ = query(collection(db, 'dms'), where('members', 'array-contains', currentUser.uid));
+  const unsubD = onSnapshot(dmsQ, async dmsSnap => {
+    for(const dmDoc of dmsSnap.docs) {
+      const dmId = dmDoc.id;
+      if(globalNotifUnsubs['dm_' + dmId]) continue;
+      const msgsQ = query(
+        collection(db, 'dms', dmId, 'messages'),
+        orderBy('ts', 'desc'),
+        limit(1)
+      );
+      const unsub = onSnapshot(msgsQ, async snap => {
+        if(snap.empty) return;
+        const msg = snap.docs[0].data();
+        if(!msg.ts) return;
+        const msgTs = msg.ts.toMillis ? msg.ts.toMillis() : 0;
+        if(msg.author === currentUser.uid) return;
+        if(msgTs <= lastNotifTs) return;
+        if(currentRoom === dmId && !document.hidden) return;
+        if(msg.type === 'system') return;
+        const u = await getUser(msg.author);
+        new Notification(u.name + ' からDM', {
+          body: msg.text,
+          icon: u.photoURL || '/chat-app/icon-192.png',
+          tag: 'dm_' + dmId,
+          renotify: true
+        });
+        lastNotifTs = msgTs;
+      });
+      globalNotifUnsubs['dm_' + dmId] = unsub;
+      globalNotifUnsubs.push(unsub);
+    }
+  });
+  globalNotifUnsubs.push(unsubD);
 }
 
 // ===== ONLINE STATUS =====
@@ -1074,7 +1179,8 @@ async function openRoom(id, type) {
   currentRoom = id; currentRoomType = type;
   if(unsubMessages) unsubMessages();
   cancelReply();
-  closeMobileSidebar(); // スマホでルーム選択時にサイドバーを閉じる
+  closeMobileSidebar();
+  markRoomAsRead(id);
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('account-page').style.display = 'none';
   const cv = document.getElementById('chat-view');
@@ -1112,8 +1218,6 @@ async function openRoom(id, type) {
   else document.getElementById('header-member-avatars').innerHTML = '';
   initScrollButton();
   document.getElementById('msg-input').focus();
-  // notify permission
-  if(Notification.permission === 'default') Notification.requestPermission();
 }
 window.openRoom = openRoom;
 
