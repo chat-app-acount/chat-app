@@ -771,8 +771,17 @@ import { getFirestore, collection, doc, setDoc, getDoc, getDocs,
   addDoc, onSnapshot, query, orderBy, serverTimestamp,
   updateDoc, arrayUnion, arrayRemove, deleteDoc, where, limit }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getMessaging, getToken, onMessage }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js';
+
+// FCMは非同期でロード（エラーが起きても他の機能に影響しないように）
+let messaging = null;
+const VAPID_KEY = 'BFUPo_ieRYgmkTzUA3hRMZTooyvC68Ppzlv1p0lp1fEUbAXe8UQKLUUoWHigILXPOHUSmutXrHoUefy8xCnDIQw';
+async function loadMessaging() {
+  try {
+    const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js');
+    messaging = getMessaging(app);
+    return { getToken, onMessage };
+  } catch(e) { console.warn('FCM load failed:', e); return null; }
+}
 
 // ===== FIREBASE CONFIG =====
 const firebaseConfig = {
@@ -788,8 +797,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
-const messaging = getMessaging(app);
-const VAPID_KEY = 'BFUPo_ieRYgmkTzUA3hRMZTooyvC68Ppzlv1p0lp1fEUbAXe8UQKLUUoWHigILXPOHUSmutXrHoUefy8xCnDIQw';
 
 // ===== STATE =====
 const COLORS = ['#7c6af7','#f472b6','#34d399','#fb923c','#60a5fa','#a78bfa','#f59e0b','#10b981','#ef4444','#06b6d4'];
@@ -832,7 +839,7 @@ window.switchTab = function(mode) {
   document.querySelectorAll('.auth-tab').forEach((t,i) =>
     t.classList.toggle('active', (mode==='login'&&i===0)||(mode==='signup'&&i===1)));
   document.getElementById('display-name-field').style.display = mode==='signup' ? 'block' : 'none';
-  document.getElementById('auth-btn').textContent = mode==='login' ? 'ログイン' : '登録する';
+  document.getElementById('auth-btn').textContent = mode==='login' ? 'ログイン' : 'アカウントを作成';
   document.getElementById('auth-btn').dataset.mode = mode;
   document.getElementById('auth-err').textContent = '';
 };
@@ -989,9 +996,27 @@ function initApp() {
 
 // ===== NOTIFICATION PERMISSION =====
 async function requestNotificationPermission() {
-  if(Notification.permission === 'default') {
-    const perm = await Notification.requestPermission();
-    if(perm === 'granted') showToast('通知が有効になりました');
+  if(Notification.permission === 'denied') return;
+  try {
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if(perm !== 'granted') return;
+    const fcm = await loadMessaging();
+    if(!fcm) { showToast('通知が有効になりました'); return; }
+    const { getToken, onMessage } = fcm;
+    const swReg = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    if(token) await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
+    onMessage(messaging, payload => {
+      const data = payload.data || {};
+      const roomId = data.roomId;
+      if(currentRoom === roomId && !document.hidden) return;
+      if(Notification.permission === 'granted') {
+        new Notification(data.title || 'ChatSpace', { body: data.body || '新しいメッセージ', icon: '/chat-app/icon-192.png', tag: roomId || 'chatspace', renotify: true });
+      }
+    });
+    showToast('通知が有効になりました');
+  } catch(e) {
+    console.warn('通知設定エラー:', e);
   }
 }
 
