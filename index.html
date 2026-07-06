@@ -732,7 +732,36 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
   </div>
 </div>
 
-<div class="modal-overlay" id="shortcut-modal">
+<div class="modal-overlay" id="bg-guide-modal">
+  <div class="modal" style="width:420px;">
+    <div class="modal-title">通知をより確実に受け取るために</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px;">
+      通知を許可していただきありがとうございます！<br>
+      ブラウザを閉じているときも通知を受け取るには、<strong>バックグラウンド実行</strong>を許可してください。
+    </p>
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:8px;">Chrome の場合</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.9;">
+        右上の <strong>⋮</strong> → 設定 → システム<br>
+        「Googleがバックグラウンドアプリを実行し続けることを許可する」を<strong>オン</strong>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:8px;">Edge の場合</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.9;">
+        右上の <strong>⋯</strong> → 設定 → システムとパフォーマンス<br>
+        「Edgeが閉じられた後もバックグラウンドのアプリを実行し続ける」を<strong>オン</strong>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+      この設定をオンにすると、ブラウザを閉じていても ChatSpace からの通知が届くようになります。スマホの場合はホーム画面に追加（PWA）するとより確実です。
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('bg-guide-modal');localStorage.setItem('bg_guide_shown','1');">後で</button>
+      <button class="btn-confirm" onclick="closeModal('bg-guide-modal');localStorage.setItem('bg_guide_shown','1');">わかった</button>
+    </div>
+  </div>
+</div>
   <div class="modal shortcut-modal">
     <div class="modal-title">ショートカットキー</div>
     <div class="shortcut-list">
@@ -1019,6 +1048,10 @@ async function requestNotificationPermission() {
       }
     });
     showToast('通知が有効になりました');
+    // バックグラウンド設定の案内を表示（初回のみ）
+    if(!localStorage.getItem('bg_guide_shown')) {
+      setTimeout(() => openModal('bg-guide-modal'), 1000);
+    }
   } catch(e) {
     console.warn('通知設定エラー:', e);
   }
@@ -1113,13 +1146,23 @@ function startGlobalNotificationListener() {
 // ===== ONLINE STATUS =====
 async function setOnline() {
   if(!currentUser) return;
-  await updateDoc(doc(db, 'users', currentUser.uid), { online: true, lastSeen: serverTimestamp() }).catch(()=>{});
-  window.addEventListener('beforeunload', () => {
-    updateDoc(doc(db, 'users', currentUser.uid), { online: false, lastSeen: serverTimestamp() }).catch(()=>{});
+  // オンライン状態をセット
+  const setOnlineStatus = async (status) => {
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+      online: status,
+      lastSeen: serverTimestamp()
+    }).catch(()=>{});
+  };
+  await setOnlineStatus(true);
+  // 30秒ごとにlastSeenを更新
+  setInterval(() => { if(currentUser) setOnlineStatus(true); }, 30000);
+  // タブを閉じたときオフラインに
+  window.addEventListener('beforeunload', () => setOnlineStatus(false));
+  // タブが非表示になったとき
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden) setOnlineStatus(false);
+    else setOnlineStatus(true);
   });
-  setInterval(() => {
-    if(currentUser) updateDoc(doc(db, 'users', currentUser.uid), { online: true, lastSeen: serverTimestamp() }).catch(()=>{});
-  }, 30000);
 }
 
 function updateMeUI() {
@@ -1142,7 +1185,13 @@ function updateMeUI() {
 async function getUser(uid) {
   if(userCache[uid]) return userCache[uid];
   const snap = await getDoc(doc(db, 'users', uid));
-  userCache[uid] = snap.exists() ? snap.data() : { name: uid, color: COLORS[0], photoURL: null };
+  const data = snap.exists() ? snap.data() : { name: uid, color: COLORS[0], photoURL: null };
+  // lastSeenが90秒以内ならオンラインとみなす
+  if(data.lastSeen) {
+    const lastSeenMs = data.lastSeen.toMillis ? data.lastSeen.toMillis() : 0;
+    data.online = Date.now() - lastSeenMs < 90000;
+  }
+  userCache[uid] = data;
   return userCache[uid];
 }
 
@@ -2193,16 +2242,16 @@ function listenUnreadForRoom(roomId, type) {
   const colRef = type === 'room'
     ? collection(db, 'rooms', roomId, 'messages')
     : collection(db, 'dms', roomId, 'messages');
-  const q = query(colRef, orderBy('ts', 'desc'), limit(20));
+  const q = query(colRef, orderBy('ts', 'desc'), limit(30));
   unreadListeners[roomId] = onSnapshot(q, snap => {
     if(currentRoom === roomId) { renderBadge(roomId, 0, type); return; }
-    const lastRead = lastReadMap[roomId] || 0;
+    // readByに自分のIDが入っていないメッセージが未読
     const unread = snap.docs.filter(d => {
       const msg = d.data();
       if(msg.author === currentUser.uid) return false;
       if(msg.type === 'system') return false;
-      const ts = msg.ts?.toMillis ? msg.ts.toMillis() : 0;
-      return ts > lastRead;
+      const readBy = msg.readBy || [];
+      return !readBy.includes(currentUser.uid);
     }).length;
     renderBadge(roomId, unread, type);
   });
@@ -2230,6 +2279,23 @@ function renderBadge(roomId, count, type) {
 function markRoomAsRead(roomId) {
   lastReadMap[roomId] = Date.now();
   renderBadge(roomId, 0, currentRoomType || 'room');
+  // Firestoreのreadbyも更新
+  const type = currentRoomType || 'room';
+  const colRef = type === 'room'
+    ? collection(db, 'rooms', roomId, 'messages')
+    : collection(db, 'dms', roomId, 'messages');
+  const q = query(colRef, orderBy('ts', 'desc'), limit(30));
+  getDocs(q).then(snap => {
+    snap.docs.forEach(d => {
+      const msg = d.data();
+      if(msg.type === 'system') return;
+      if(msg.author === currentUser.uid) return;
+      const readBy = msg.readBy || [];
+      if(!readBy.includes(currentUser.uid)) {
+        updateDoc(d.ref, { readBy: arrayUnion(currentUser.uid) }).catch(()=>{});
+      }
+    });
+  });
 }
 window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
 document.querySelectorAll('.modal-overlay').forEach(el => {
