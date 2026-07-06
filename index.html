@@ -11,6 +11,10 @@
 <link rel="canonical" href="https://chat-app-acount.github.io/chat-app/">
 <meta name="google-site-verification" content="mnPUk6etEpDQUZH1vDYiRF1-0qEYr3Ox3F3NEcMzGqg" />
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#7c6af7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2167,6 +2171,66 @@ document.addEventListener('keydown', e => {
 });
 
 window.openModal = function(id) { document.getElementById(id).classList.add('show'); };
+window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
+
+// ===== UNREAD BADGES =====
+let unreadListeners = {};
+let lastReadMap = {};
+
+function initUnreadListener() {
+  const roomsQ = query(collection(db, 'rooms'), where('members', 'array-contains', currentUser.uid));
+  onSnapshot(roomsQ, snap => {
+    snap.docs.forEach(d => listenUnreadForRoom(d.id, 'room'));
+  });
+  const dmsQ = query(collection(db, 'dms'), where('members', 'array-contains', currentUser.uid));
+  onSnapshot(dmsQ, snap => {
+    snap.docs.forEach(d => listenUnreadForRoom(d.id, 'dm'));
+  });
+}
+
+function listenUnreadForRoom(roomId, type) {
+  if(unreadListeners[roomId]) return;
+  const colRef = type === 'room'
+    ? collection(db, 'rooms', roomId, 'messages')
+    : collection(db, 'dms', roomId, 'messages');
+  const q = query(colRef, orderBy('ts', 'desc'), limit(20));
+  unreadListeners[roomId] = onSnapshot(q, snap => {
+    if(currentRoom === roomId) { renderBadge(roomId, 0, type); return; }
+    const lastRead = lastReadMap[roomId] || 0;
+    const unread = snap.docs.filter(d => {
+      const msg = d.data();
+      if(msg.author === currentUser.uid) return false;
+      if(msg.type === 'system') return false;
+      const ts = msg.ts?.toMillis ? msg.ts.toMillis() : 0;
+      return ts > lastRead;
+    }).length;
+    renderBadge(roomId, unread, type);
+  });
+}
+
+function renderBadge(roomId, count, type) {
+  const items = document.querySelectorAll(type === 'room' ? '.room-item' : '.dm-item');
+  items.forEach(item => {
+    const onclick = item.onclick?.toString() || '';
+    if(!onclick.includes('"' + roomId + '"') && !onclick.includes("'" + roomId + "'") && item.dataset.roomId !== roomId) return;
+    let badge = item.querySelector('.room-badge');
+    if(count > 0) {
+      if(!badge) {
+        badge = document.createElement('span'); badge.className = 'room-badge';
+        badge.style.cssText = 'background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;flex-shrink:0;';
+        item.appendChild(badge);
+      }
+      badge.textContent = count > 99 ? '99+' : count;
+    } else {
+      if(badge) badge.remove();
+    }
+  });
+}
+
+function markRoomAsRead(roomId) {
+  lastReadMap[roomId] = Date.now();
+  renderBadge(roomId, 0, currentRoomType || 'room');
+}
 window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if(e.target === el) el.classList.remove('show'); });
