@@ -343,8 +343,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 @media(max-width:720px){#sidebar{width:200px;min-width:200px;}#members-panel{display:none!important;}.auth-card{width:95vw;padding:26px 16px;}.account-inner{padding:18px 12px;}}
 
 /* ===== MOBILE LAYOUT ===== */
-@media(max-width:600px){
-  /* サイドバーをオーバーレイに */
+@media(max-width:768px){
   #sidebar{
     position:fixed;left:0;top:0;bottom:0;z-index:150;
     width:280px;min-width:280px;
@@ -353,56 +352,33 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
     box-shadow:4px 0 20px var(--shadow);
   }
   #sidebar.mobile-open{transform:translateX(0);}
-  /* オーバーレイ背景 */
-  #sidebar-overlay{
-    display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140;
-  }
+  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140;}
   #sidebar-overlay.show{display:block;}
-  /* メインを全幅に */
   #app{flex-direction:column;}
   #main{width:100%;flex:1;}
   #members-panel{display:none!important;}
-  /* ヘッダーにハンバーガーボタン追加 */
-  .mobile-menu-btn{
-    display:flex;width:36px;height:36px;border-radius:8px;
-    background:none;border:none;color:var(--text);cursor:pointer;
-    align-items:center;justify-content:center;flex-shrink:0;
-  }
-  /* ヘッダーをスマホ用に */
+  .mobile-menu-btn{display:flex;width:36px;height:36px;border-radius:8px;background:none;border:none;color:var(--text);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;}
   .chat-header{padding:10px 14px 8px;}
   .chat-header-name{font-size:14px;}
   .chat-header-desc{display:none;}
-  /* ルームコードとアバターを非表示 */
   .room-code-inline{display:none!important;}
   .header-member-avatars{display:none!important;}
-  /* アクションボタンを減らす */
   .chat-header-actions .icon-btn:not(:last-child):not(:nth-last-child(2)){display:none;}
-  /* メッセージ欄のパディング調整 */
   #messages{padding:12px 10px;}
   .msg-bubble,.msg-own-bubble{max-width:calc(100vw - 100px);}
-  /* 入力欄 */
   .input-area{padding:6px 10px 10px;}
   .input-wrap{padding:8px 10px;}
-  #msg-input{font-size:16px;} /* iOSズーム防止 */
-  /* スクロールボタン */
+  #msg-input{font-size:16px;}
   .scroll-bottom-btn{bottom:70px;right:14px;}
-  /* サイドバー内のフッター */
   .sidebar-footer{padding:12px;}
-  /* 空の状態 */
   #empty-state{padding:20px;}
   .empty-title{font-size:16px;}
-  /* アカウントページ */
   .account-inner{padding:14px 12px;}
-  /* モーダル */
   .modal{width:95vw;padding:20px 16px;}
-  /* トースト */
   .toast{bottom:70px;width:90vw;justify-content:center;}
-  /* 認証画面 */
   .auth-card{width:95vw;padding:28px 18px;margin:16px;}
-  /* ルームIDバー */
   .room-id-bar{padding:4px 14px 5px;}
 }
-/* ハンバーガーボタンはPCでは非表示 */
 .mobile-menu-btn{display:none;}
 
 
@@ -733,44 +709,65 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 </div>
 
 <div class="modal-overlay" id="bg-guide-modal">
-  <div class="modal" style="width:420px;">
-    <div class="modal-title">通知をより確実に受け取るために</div>
+  <div class="modal" style="width:440px;max-height:88vh;overflow-y:auto;">
+    <div class="modal-title">通知を確実に受け取るための設定</div>
     <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px;">
-      通知を許可していただきありがとうございます！<br>
-      ブラウザを閉じているときも通知を受け取るには、<strong>バックグラウンド実行</strong>を許可してください。
+      以下の3つを設定すると、ブラウザを閉じていてもPCを再起動しても通知が届くようになります。
     </p>
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+        <div style="font-size:13px;font-weight:700;">通知を許可する</div>
+        <div id="step1-status" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--green);"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        ブラウザ上部に出る「通知を許可しますか？」で<strong>「許可」</strong>をクリック。<br>
+        許可するとメッセージが届いたとき通知が表示されます。
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+        <div style="font-size:13px;font-weight:700;">バックグラウンド実行をオンにする</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.9;margin-bottom:8px;">
+        これをオンにするとタブやブラウザを閉じていても通知が届くようになります。
+      </div>
+      <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:3px;">Chrome の場合</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:8px;">
+        右上 <strong>⋮</strong> → 設定 → システム →「Googleがバックグラウンドアプリを実行し続けることを許可する」を<strong>オン</strong>
+      </div>
+      <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:3px;">Edge の場合</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        右上 <strong>⋯</strong> → 設定 → システムとパフォーマンス →「Edgeが閉じられた後もバックグラウンドのアプリを実行し続ける」を<strong>オン</strong>
+      </div>
+    </div>
     <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:8px;">Chrome の場合</div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.9;">
-        右上の <strong>⋮</strong> → 設定 → システム<br>
-        「Googleがバックグラウンドアプリを実行し続けることを許可する」を<strong>オン</strong>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+        <div style="font-size:13px;font-weight:700;">PC起動時にブラウザを自動起動する</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.9;margin-bottom:8px;">
+        PCを再起動しても自動でブラウザが起動して通知が届くようになります。
+      </div>
+      <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:3px;">Chrome の場合</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:8px;">
+        右上 <strong>⋮</strong> → 設定 → 起動時 →「特定のページを開く」→「新しいページを追加」に<br>
+        <span style="font-family:monospace;font-size:11px;color:var(--accent2);">https://chat-app-acount.github.io/chat-app/</span> を追加
+      </div>
+      <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:3px;">Edge の場合</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        右上 <strong>⋯</strong> → 設定 → 起動時 →「これらのページを開く」→「新しいページを追加」に<br>
+        <span style="font-family:monospace;font-size:11px;color:var(--accent2);">https://chat-app-acount.github.io/chat-app/</span> を追加
       </div>
     </div>
-    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:8px;">Edge の場合</div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.9;">
-        右上の <strong>⋯</strong> → 設定 → システムとパフォーマンス<br>
-        「Edgeが閉じられた後もバックグラウンドのアプリを実行し続ける」を<strong>オン</strong>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7;">
-      この設定をオンにすると、ブラウザを閉じていても ChatSpace からの通知が届くようになります。スマホの場合はホーム画面に追加（PWA）するとより確実です。
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7;text-align:center;">
+      3つ全て設定完了でブラウザを閉じていてもPCを再起動しても通知が届きます
     </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal('bg-guide-modal');localStorage.setItem('bg_guide_shown','1');">後で</button>
-      <button class="btn-confirm" onclick="closeModal('bg-guide-modal');localStorage.setItem('bg_guide_shown','1');">わかった</button>
+      <button class="btn-confirm" onclick="closeModal('bg-guide-modal');localStorage.setItem('bg_guide_shown','1');">設定した</button>
     </div>
-  </div>
-</div>
-  <div class="modal shortcut-modal">
-    <div class="modal-title">ショートカットキー</div>
-    <div class="shortcut-list">
-      <div class="shortcut-item"><span class="shortcut-desc">ルーム検索</span><span class="shortcut-key">Ctrl + K</span></div>
-      <div class="shortcut-item"><span class="shortcut-desc">ブックマーク</span><span class="shortcut-key">Ctrl + B</span></div>
-      <div class="shortcut-item"><span class="shortcut-desc">メッセージ検索</span><span class="shortcut-key">Ctrl + F</span></div>
-      <div class="shortcut-item"><span class="shortcut-desc">ショートカット一覧</span><span class="shortcut-key">Ctrl + /</span></div>
-    </div>
-    <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('shortcut-modal')">閉じる</button></div>
   </div>
 </div>
 
@@ -1034,27 +1031,35 @@ async function requestNotificationPermission() {
     const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if(perm !== 'granted') return;
     const fcm = await loadMessaging();
-    if(!fcm) { showToast('通知が有効になりました'); return; }
-    const { getToken, onMessage } = fcm;
-    const swReg = await navigator.serviceWorker.ready;
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-    if(token) await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
-    onMessage(messaging, payload => {
-      const data = payload.data || {};
-      const roomId = data.roomId;
-      if(currentRoom === roomId && !document.hidden) return;
-      if(Notification.permission === 'granted') {
-        new Notification(data.title || 'ChatSpace', { body: data.body || '新しいメッセージ', icon: '/chat-app/icon-192.png', tag: roomId || 'chatspace', renotify: true });
-      }
-    });
-    showToast('通知が有効になりました');
-    // バックグラウンド設定の案内を表示（初回のみ）
+    if(fcm) {
+      const { getToken, onMessage } = fcm;
+      const swReg = await navigator.serviceWorker.ready;
+      const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg }).catch(()=>null);
+      if(token) await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
+      onMessage(messaging, payload => {
+        const data = payload.data || {};
+        const roomId = data.roomId;
+        if(currentRoom === roomId && !document.hidden) return;
+        if(Notification.permission === 'granted') {
+          new Notification(data.title || 'ChatSpace', { body: data.body || '新しいメッセージ', icon: '/chat-app/icon-192.png', tag: roomId || 'chatspace', renotify: true });
+        }
+      });
+    }
+    // バックグラウンド設定案内を表示（初回のみ）
     if(!localStorage.getItem('bg_guide_shown')) {
-      setTimeout(() => openModal('bg-guide-modal'), 1000);
+      setTimeout(() => showBgGuideStep1(), 800);
     }
   } catch(e) {
     console.warn('通知設定エラー:', e);
   }
+}
+
+// OS許可ダイアログ風の設定案内
+function showBgGuideStep1() {
+  openModal('bg-guide-modal');
+  // 通知許可状態を表示
+  const s = document.getElementById('step1-status');
+  if(s) s.textContent = Notification.permission === 'granted' ? '許可済み' : '';
 }
 
 // ===== GLOBAL NOTIFICATION LISTENER =====
@@ -1365,7 +1370,9 @@ function listenMessages(roomId, type) {
       } else {
         const cont = document.createElement('div'); cont.className = own ? 'msg-own-continuation' : 'msg-continuation';
         const bubble = document.createElement('div'); bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
-        bubble.textContent = msg.text;
+        if(!own) bubble.style.background = getUserHighlightColor(u.color || '#888');
+        bubble.textContent = msg.deleted ? '(削除済み)' : msg.text;
+        if(msg.edited && !msg.deleted) { const ed = document.createElement('span'); ed.className = 'msg-edited'; ed.textContent = '(編集済み)'; bubble.appendChild(ed); }
         cont.appendChild(bubble);
         if(msg.reactions && Object.keys(msg.reactions).length > 0) cont.appendChild(renderReactions(msg, d.id, type));
         if(own && msg.readBy && msg.readBy.length > 1) {
@@ -1377,13 +1384,12 @@ function listenMessages(roomId, type) {
         wrap.appendChild(cont); wrap.appendChild(actions);
       }
       container.appendChild(wrap);
-      // 右クリックメニュー
       wrap.addEventListener('contextmenu', e => showContextMenu(e, msg, d.id, type, own));
       prev = msg.author;
     }
     if(atBot) container.scrollTop = container.scrollHeight;
-    // ルームを開いているときだけ既読にする
-    if(!document.hidden) {
+    // デバイスが見えている状態のときだけ既読にする（タブを閉じているとき・デバイスがスリープのときはつけない）
+    if(!document.hidden && document.visibilityState === 'visible') {
       snap.docs.forEach(d => {
         const msg = d.data();
         if(msg.type !== 'system' && msg.author !== currentUser.uid) {
@@ -2207,17 +2213,6 @@ window.filterRooms = function(q) {
   if(found === 0) results.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px;">見つかりませんでした</div>';
 };
 document.getElementById('room-search-input').addEventListener('keydown', e => { if(e.key === 'Escape') closeModal('room-search-modal'); });
-
-// ===== SHORTCUTS =====
-document.addEventListener('keydown', e => {
-  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if((e.ctrlKey || e.metaKey)) {
-    if(e.key === 'k') { e.preventDefault(); window.openRoomSearch(); }
-    if(e.key === 'b') { e.preventDefault(); window.toggleBookmarks(); }
-    if(e.key === 'f') { e.preventDefault(); window.openSearch(); }
-    if(e.key === '/') { e.preventDefault(); openModal('shortcut-modal'); }
-  }
-});
 
 window.openModal = function(id) { document.getElementById(id).classList.add('show'); };
 window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
