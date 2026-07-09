@@ -382,7 +382,27 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .mobile-menu-btn{display:none;}
 
 
-/* ===== URL PREVIEW ===== */
+/* ===== SETUP SCREEN ===== */
+#setup-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:110;padding:20px;}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 8px 60px var(--shadow);}
+.setup-steps{display:flex;gap:6px;margin-bottom:28px;}
+.setup-step-dot{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s;}
+.setup-step-dot.done{background:var(--accent);}
+.setup-step-dot.active{background:var(--accent2);}
+.setup-icon{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.setup-title{font-size:20px;font-weight:700;margin-bottom:8px;line-height:1.3;}
+.setup-desc{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:10px;}
+.setup-warn{font-size:13px;color:var(--red);font-weight:600;line-height:1.6;margin-bottom:20px;padding:10px 14px;background:rgba(248,113,113,.1);border-radius:10px;border:1px solid rgba(248,113,113,.3);}
+.setup-info{font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:20px;padding:12px 14px;background:var(--surface2);border-radius:10px;}
+.setup-info b{color:var(--text2);}
+.setup-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:11px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;margin-bottom:8px;}
+.setup-btn:hover{background:var(--accent2);transform:translateY(-1px);}
+.setup-btn-skip{width:100%;padding:10px;background:none;border:1px solid var(--border);border-radius:11px;color:var(--muted);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+.setup-btn-skip:hover{border-color:var(--muted);}
+.setup-status{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:16px;padding:10px 14px;border-radius:10px;}
+.setup-status.ok{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--green);}
+.setup-status.ng{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);}
+.setup-plead{font-size:13px;color:var(--yellow);font-weight:600;line-height:1.6;margin-bottom:16px;padding:10px 14px;background:rgba(251,191,36,.08);border-radius:10px;border:1px solid rgba(251,191,36,.3);display:none;}
 .url-preview{margin-top:6px;border:1px solid var(--border);border-radius:10px;overflow:hidden;max-width:360px;cursor:pointer;transition:border-color .2s;}
 .url-preview:hover{border-color:var(--accent);}
 .url-preview-img{width:100%;height:140px;object-fit:cover;display:block;}
@@ -440,6 +460,85 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 <div id="loading-screen">
   <div class="loading-logo">ChatSpace</div>
   <div class="loading-spin"></div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-card">
+    <div class="setup-steps">
+      <div class="setup-step-dot active" id="sdot0"></div>
+      <div class="setup-step-dot" id="sdot1"></div>
+      <div class="setup-step-dot" id="sdot2"></div>
+    </div>
+    <div id="setup-step-0">
+      <div class="setup-icon" style="background:rgba(124,106,247,.15);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+      <div class="setup-title">通知を許可してください</div>
+      <div class="setup-desc">ChatSpaceからのメッセージ通知を受け取るために必要です。</div>
+      <div class="setup-warn">
+        ⚠️ 許可しないと、誰かからメッセージが来ても<br>一切通知が届きません。
+      </div>
+      <div class="setup-status ng" id="notif-status-ng" style="display:none">
+        通知がブロックされています。ブラウザのアドレスバー左の鍵アイコンから「通知」→「許可」に変更してください。
+      </div>
+      <div class="setup-plead" id="notif-plead">
+        お願いです！通知を許可してもらえると、メッセージを見逃さずに済みます。もう一度許可してみてください。
+      </div>
+      <div class="setup-status ok" id="notif-status-ok" style="display:none">
+        通知が許可されました！
+      </div>
+      <button class="setup-btn" id="notif-btn" onclick="setupRequestNotif()">通知を許可する</button>
+      <button class="setup-btn-skip" onclick="setupNext(0)">今はしない（通知は届きません）</button>
+    </div>
+
+    <div id="setup-step-1" style="display:none">
+      <div class="setup-icon" style="background:rgba(251,191,36,.15);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div class="setup-title">バックグラウンド実行を許可する</div>
+      <div class="setup-desc">この設定をしないと、タブやブラウザを閉じた瞬間に通知が完全に止まります。</div>
+      <div class="setup-warn">
+        ⚠️ やらないとブラウザを閉じた瞬間から<br>通知が届かなくなります。絶対に設定してください。
+      </div>
+      <div class="setup-info" id="bg-steps-info">
+        <b>Chrome の場合</b><br>
+        右上 ⋮ → 設定 → システム<br>
+        「Googleがバックグラウンドアプリを実行し続けることを許可する」を<b>オン</b><br><br>
+        <b>Edge の場合</b><br>
+        右上 ⋯ → 設定 → システムとパフォーマンス<br>
+        「Edgeが閉じられた後もバックグラウンドのアプリを実行し続ける」を<b>オン</b><br><br>
+        <b>Safari（iPhone/iPad）の場合</b><br>
+        ホーム画面に追加（PWAインストール）することで通知が届くようになります。<br>
+        Safari → 共有ボタン → 「ホーム画面に追加」
+      </div>
+      <button class="setup-btn" onclick="setupNext(1)">設定した → 次へ</button>
+      <button class="setup-btn-skip" onclick="setupNext(1)">あとで設定する（ブラウザを閉じると通知が止まります）</button>
+    </div>
+
+    <div id="setup-step-2" style="display:none">
+      <div class="setup-icon" style="background:rgba(74,222,128,.15);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+      </div>
+      <div class="setup-title">PC起動時にブラウザを自動起動する</div>
+      <div class="setup-desc">PCを再起動するたびに手動でブラウザを開かないと通知が届かなくなります。</div>
+      <div class="setup-warn">
+        ⚠️ やらないとPC再起動のたびに通知が止まります。<br>毎回手動で開く必要があります。
+      </div>
+      <div class="setup-info">
+        <b>Chrome の場合</b><br>
+        右上 ⋮ → 設定 → 起動時 →「特定のページを開く」→「新しいページを追加」<br>
+        <span style="font-family:monospace;font-size:11px;color:var(--accent2);">https://chat-app-acount.github.io/chat-app/</span> を追加<br><br>
+        <b>Edge の場合</b><br>
+        右上 ⋯ → 設定 → 起動時 →「これらのページを開く」→「新しいページを追加」<br>
+        <span style="font-family:monospace;font-size:11px;color:var(--accent2);">https://chat-app-acount.github.io/chat-app/</span> を追加<br><br>
+        <b>Safari（iPhone/iPad）の場合</b><br>
+        ホーム画面に追加済みであれば通知は自動で届きます。この手順は不要です。
+      </div>
+      <button class="setup-btn" onclick="setupFinish()">設定した → はじめる</button>
+      <button class="setup-btn-skip" onclick="setupFinish()">あとで設定する（再起動後は通知が止まります）</button>
+    </div>
+  </div>
 </div>
 
 <!-- AUTH -->
@@ -864,7 +963,61 @@ setTheme(getTheme());
 setInterval(() => { if(getTheme() === 'auto') setTheme('auto'); }, 3600000);
 
 // ===== AUTH =====
-// ===== AUTH UI =====
+// ===== SETUP SCREEN =====
+function showSetupScreen() {
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('auth-screen').style.display = 'none';
+  updateSetupDots(0);
+}
+
+function updateSetupDots(active) {
+  [0,1,2].forEach(i => {
+    const dot = document.getElementById('sdot' + i);
+    dot.className = 'setup-step-dot ' + (i < active ? 'done' : i === active ? 'active' : '');
+  });
+}
+
+window.setupRequestNotif = async function() {
+  const btn = document.getElementById('notif-btn');
+  btn.disabled = true;
+  try {
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted') {
+      document.getElementById('notif-status-ok').style.display = 'flex';
+      document.getElementById('notif-status-ng').style.display = 'none';
+      document.getElementById('notif-plead').style.display = 'none';
+      btn.style.display = 'none';
+      setTimeout(() => setupNext(0), 1200);
+    } else if(perm === 'denied') {
+      document.getElementById('notif-status-ng').style.display = 'flex';
+      document.getElementById('notif-plead').style.display = 'none';
+      btn.disabled = false;
+    } else {
+      // dismissed
+      document.getElementById('notif-plead').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'もう一度許可する';
+    }
+  } catch(e) {
+    btn.disabled = false;
+  }
+};
+
+window.setupNext = function(from) {
+  document.getElementById('setup-step-' + from).style.display = 'none';
+  const next = from + 1;
+  if(next <= 2) {
+    document.getElementById('setup-step-' + next).style.display = 'block';
+    updateSetupDots(next);
+  }
+};
+
+window.setupFinish = function() {
+  localStorage.setItem('setup_done', '1');
+  localStorage.setItem('bg_guide_shown', '1');
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+};
 window.switchTab = function(mode) {
   document.querySelectorAll('.auth-tab').forEach((t,i) =>
     t.classList.toggle('active', (mode==='login'&&i===0)||(mode==='signup'&&i===1)));
@@ -994,13 +1147,20 @@ onAuthStateChanged(auth, async (user) => {
     initApp();
   } else {
     currentUser = null;
-    document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
     document.getElementById('chat-view').style.display = 'none';
     document.getElementById('account-page').style.display = 'none';
     document.getElementById('empty-state').style.display = 'flex';
     document.getElementById('auth-btn').disabled = false;
     document.getElementById('google-btn').disabled = false;
+    // 初回はセットアップ画面、2回目以降はログイン画面
+    if(!localStorage.getItem('setup_done')) {
+      document.getElementById('auth-screen').style.display = 'none';
+      showSetupScreen();
+    } else {
+      document.getElementById('auth-screen').style.display = 'flex';
+      document.getElementById('setup-screen').style.display = 'none';
+    }
   }
 });
 
@@ -1011,8 +1171,8 @@ function initApp() {
   listenRooms();
   listenDMs();
   setOnline();
-  // 初ログイン時に通知許可を要求
-  requestNotificationPermission();
+  // FCMリスナー起動（通知許可済みなら）
+  if(Notification.permission === 'granted') requestNotificationPermission();
   // グローバル通知リスナー起動
   startGlobalNotificationListener();
   // 未読バッジリスナー起動
