@@ -344,41 +344,96 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 
 /* ===== MOBILE LAYOUT ===== */
 @media(max-width:768px){
-  #sidebar{
-    position:fixed;left:0;top:0;bottom:0;z-index:150;
-    width:280px;min-width:280px;
-    transform:translateX(-100%);
-    transition:transform .25s cubic-bezier(.4,0,.2,1);
-    box-shadow:4px 0 20px var(--shadow);
-  }
+  /* サイドバー */
+  #sidebar{position:fixed;left:0;top:0;bottom:0;z-index:150;width:85vw;max-width:320px;min-width:0;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 30px var(--shadow);}
   #sidebar.mobile-open{transform:translateX(0);}
-  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140;}
+  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140;-webkit-tap-highlight-color:transparent;}
   #sidebar-overlay.show{display:block;}
   #app{flex-direction:column;}
-  #main{width:100%;flex:1;}
-  #members-panel{display:none!important;}
-  .mobile-menu-btn{display:flex;width:36px;height:36px;border-radius:8px;background:none;border:none;color:var(--text);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;}
-  .chat-header{padding:10px 14px 8px;}
-  .chat-header-name{font-size:14px;}
+  #main{width:100%;flex:1;min-height:0;}
+  #members-panel,#bookmark-panel{display:none!important;}
+
+  /* ハンバーガー */
+  .mobile-menu-btn{display:flex;width:44px;height:44px;border-radius:10px;background:none;border:none;color:var(--text);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+
+  /* ヘッダー */
+  .chat-header{padding:8px 10px;border-bottom:1px solid var(--border);}
+  .chat-header-name{font-size:15px;}
   .chat-header-desc{display:none;}
   .room-code-inline{display:none!important;}
   .header-member-avatars{display:none!important;}
-  .chat-header-actions .icon-btn:not(:last-child):not(:nth-last-child(2)){display:none;}
-  #messages{padding:12px 10px;}
-  .msg-bubble,.msg-own-bubble{max-width:calc(100vw - 100px);}
-  .input-area{padding:6px 10px 10px;}
-  .input-wrap{padding:8px 10px;}
-  #msg-input{font-size:16px;}
-  .scroll-bottom-btn{bottom:70px;right:14px;}
-  .sidebar-footer{padding:12px;}
-  #empty-state{padding:20px;}
-  .empty-title{font-size:16px;}
-  .account-inner{padding:14px 12px;}
-  .modal{width:95vw;padding:20px 16px;}
-  .toast{bottom:70px;width:90vw;justify-content:center;}
-  .auth-card{width:95vw;padding:28px 18px;margin:16px;}
-  .room-id-bar{padding:4px 14px 5px;}
+  .chat-header-actions{gap:2px;}
+  .icon-btn{padding:8px;min-width:40px;min-height:40px;-webkit-tap-highlight-color:transparent;}
+
+  /* メッセージ */
+  #messages{padding:10px 8px;-webkit-overflow-scrolling:touch;}
+  .msg-bubble,.msg-own-bubble{max-width:calc(100vw - 90px);font-size:14px;padding:8px 12px;}
+  .msg-avatar{width:32px;height:32px;font-size:12px;}
+  .msg-own-row,.msg-row{gap:8px;}
+  .msg-continuation{padding-left:40px;}
+
+  /* 入力欄 - キーボード対応 */
+  .input-area{padding:8px 10px;padding-bottom:max(8px, env(safe-area-inset-bottom));background:var(--surface);}
+  .input-wrap{padding:8px 10px;border-radius:22px;}
+  #msg-input{font-size:16px;min-height:24px;} /* 16px以上でiOSズーム防止 */
+  .send-btn{width:38px;height:38px;border-radius:50%;-webkit-tap-highlight-color:transparent;}
+  .stamp-btn{padding:6px;-webkit-tap-highlight-color:transparent;}
+
+  /* スクロールボタン */
+  .scroll-bottom-btn{bottom:80px;right:16px;width:44px;height:44px;}
+
+  /* サイドバー内 */
+  .sidebar-footer{padding:12px 14px;min-height:60px;}
+  .room-item,.dm-item{padding:11px 14px;min-height:44px;}
+  .add-btn{width:24px;height:24px;font-size:16px;}
+
+  /* 空の状態 */
+  #empty-state{padding:24px 16px;}
+  .empty-title{font-size:18px;}
+
+  /* モーダル */
+  .modal{width:95vw;max-width:400px;padding:22px 18px;border-radius:20px;}
+  .modal-overlay{align-items:flex-end;}
+  .modal-overlay .modal{border-radius:20px 20px 0 0;padding-bottom:max(24px,env(safe-area-inset-bottom));}
+  .modal-overlay.show .modal{transform:scale(1);}
+
+  /* トースト */
+  .toast{bottom:max(80px,calc(env(safe-area-inset-bottom)+70px));width:90vw;justify-content:center;}
+
+  /* 認証画面 */
+  .auth-card{width:95vw;padding:28px 18px;margin:16px;border-radius:16px;}
+
+  /* アカウント */
+  .account-inner{padding:16px 14px;}
+  .acct-section{padding:16px;}
+  .stat-row{gap:8px;}
+  .stat-card{padding:10px;}
+
+  /* セットアップ */
+  .setup-card{padding:28px 20px;border-radius:16px;}
+  .setup-btn{font-size:14px;padding:14px;}
+
+  /* リプライバー */
+  .reply-bar{padding:8px 14px;}
+
+  /* ピンバー */
+  .pinned-bar{padding:6px 14px;}
+
+  /* タイピングインジケータ */
+  .typing-indicator{padding:4px 14px 5px;}
+
+  /* プロフィールポップアップ */
+  .profile-popup{width:calc(100vw - 32px);max-width:300px;}
 }
+
+/* iOS safe area対応 */
+@supports(padding: max(0px)) {
+  @media(max-width:768px) {
+    #chat-view{padding-bottom:env(safe-area-inset-bottom);}
+    .input-area{padding-bottom:max(8px,env(safe-area-inset-bottom));}
+  }
+}
+
 .mobile-menu-btn{display:none;}
 
 
@@ -1504,6 +1559,7 @@ async function openRoom(id, type) {
 window.openRoom = openRoom;
 
 // ===== MESSAGES =====
+let renderedMsgIds = new Set();
 function listenMessages(roomId, type) {
   const colPath = type === 'room'
     ? collection(db, 'rooms', roomId, 'messages')
@@ -1511,8 +1567,112 @@ function listenMessages(roomId, type) {
   const q = query(colPath, orderBy('ts', 'asc'));
   const container = document.getElementById('messages');
   container.innerHTML = '';
+  renderedMsgIds = new Set();
   if(unsubMessages) unsubMessages();
   unsubMessages = onSnapshot(q, async snap => {
+    const atBot = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    const scrollPos = container.scrollTop; // 現在のスクロール位置を保存
+
+    // 新しいメッセージだけ追加（既存は更新しない）
+    let prev = container.lastChild?.dataset?.author || null;
+    for(const d of snap.docs) {
+      const msg = { id: d.id, ...d.data() };
+      // 既に描画済みのメッセージはスキップ（既読・リアクション更新は別処理）
+      if(renderedMsgIds.has(d.id)) {
+        // 既読数とリアクションだけ更新
+        const existingWrap = container.querySelector(`[data-msgid="${d.id}"]`);
+        if(existingWrap) {
+          const rr = existingWrap.querySelector('.read-receipt');
+          if(rr && msg.readBy && msg.readBy.length > 1) rr.textContent = '既読 ' + (msg.readBy.length - 1);
+          else if(rr && (!msg.readBy || msg.readBy.length <= 1)) rr.textContent = '';
+        }
+        prev = msg.author;
+        continue;
+      }
+      renderedMsgIds.add(d.id);
+
+      if(msg.type === 'system') {
+        const s = document.createElement('div'); s.className = 'system-msg';
+        s.dataset.msgid = d.id;
+        s.innerHTML = '<span>' + escH(msg.text) + '</span>';
+        container.appendChild(s); prev = null; continue;
+      }
+      const u = await getUser(msg.author);
+      const own = msg.author === currentUser.uid;
+      const same = prev === msg.author;
+      const wrap = document.createElement('div'); wrap.className = 'msg-wrap';
+      wrap.dataset.msgid = d.id;
+      wrap.dataset.author = msg.author;
+
+      if(!same) {
+        const group = document.createElement('div'); group.className = 'msg-group';
+        const row = document.createElement('div'); row.className = own ? 'msg-own-row' : 'msg-row';
+        const av = renderAvatar(u, 34);
+        av.onclick = e => window.showProfilePopup(msg.author, e);
+        const ct = document.createElement('div'); ct.className = own ? 'msg-own-content' : 'msg-content';
+        if(msg.replyTo) {
+          const rq = document.createElement('div'); rq.className = 'reply-quote';
+          rq.textContent = msg.replyToText || '元のメッセージ';
+          ct.appendChild(rq);
+        }
+        const meta = document.createElement('div'); meta.className = own ? 'msg-own-meta' : 'msg-meta';
+        const authorSpan = document.createElement('span'); authorSpan.className = 'msg-author';
+        authorSpan.textContent = u.name; authorSpan.style.cursor = 'pointer';
+        authorSpan.onclick = e => window.showProfilePopup(msg.author, e);
+        const timeSpan = document.createElement('span'); timeSpan.className = 'msg-time'; timeSpan.textContent = fmtTime(msg.ts);
+        meta.appendChild(authorSpan); meta.appendChild(timeSpan);
+        const bubble = document.createElement('div'); bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
+        if(!own) bubble.style.background = getUserHighlightColor(u.color || '#888');
+        bubble.textContent = msg.deleted ? '(削除済み)' : msg.text;
+        if(msg.edited && !msg.deleted) { const ed = document.createElement('span'); ed.className = 'msg-edited'; ed.textContent = '(編集済み)'; bubble.appendChild(ed); }
+        ct.appendChild(meta); ct.appendChild(bubble);
+        if(msg.reactions && Object.keys(msg.reactions).length > 0) ct.appendChild(renderReactions(msg, d.id, type));
+        if(own && msg.readBy && msg.readBy.length > 1) {
+          const rr = document.createElement('div'); rr.className = 'read-receipt';
+          rr.textContent = '既読 ' + (msg.readBy.length - 1); ct.appendChild(rr);
+        }
+        row.appendChild(av); row.appendChild(ct);
+        group.appendChild(row);
+        const actions = buildActions(msg, d.id, type, own);
+        wrap.appendChild(group); wrap.appendChild(actions);
+      } else {
+        const cont = document.createElement('div'); cont.className = own ? 'msg-own-continuation' : 'msg-continuation';
+        const bubble = document.createElement('div'); bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
+        if(!own) bubble.style.background = getUserHighlightColor(u.color || '#888');
+        bubble.textContent = msg.deleted ? '(削除済み)' : msg.text;
+        if(msg.edited && !msg.deleted) { const ed = document.createElement('span'); ed.className = 'msg-edited'; ed.textContent = '(編集済み)'; bubble.appendChild(ed); }
+        cont.appendChild(bubble);
+        if(msg.reactions && Object.keys(msg.reactions).length > 0) cont.appendChild(renderReactions(msg, d.id, type));
+        if(own && msg.readBy && msg.readBy.length > 1) {
+          const rr = document.createElement('div'); rr.className = 'read-receipt';
+          rr.textContent = '既読 ' + (msg.readBy.length - 1); cont.appendChild(rr);
+        }
+        const actions = buildActions(msg, d.id, type, own);
+        wrap.appendChild(cont); wrap.appendChild(actions);
+      }
+      container.appendChild(wrap);
+      wrap.addEventListener('contextmenu', e => showContextMenu(e, msg, d.id, type, own));
+      wrap.addEventListener('touchstart', e => {
+        const timer = setTimeout(() => showContextMenu(e.touches[0], msg, d.id, type, own), 500);
+        wrap.addEventListener('touchend', () => clearTimeout(timer), {once:true});
+        wrap.addEventListener('touchmove', () => clearTimeout(timer), {once:true});
+      });
+      prev = msg.author;
+    }
+
+    // 新しいメッセージなら最下部へ、それ以外はスクロール位置を保持
+    if(atBot) container.scrollTop = container.scrollHeight;
+    else container.scrollTop = scrollPos;
+
+    // 既読処理
+    if(!document.hidden && document.visibilityState === 'visible') {
+      snap.docs.forEach(d => {
+        const msg = d.data();
+        if(msg.type !== 'system' && msg.author !== currentUser.uid) markRead(d.id, type);
+      });
+    }
+  });
+}
     const atBot = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     container.innerHTML = '';
     let prev = null;
@@ -2215,20 +2375,29 @@ function listenHeaderMembers(roomId) {
   });
 }
 
-// ===== STAMPS (修正版) =====
+// ===== STAMPS =====
 const STAMPS = ['🎉','🎊','👏','🙌','💪','🤝','👋','✌️','🤞','💯','🔥','⭐','💫','🌟','❤️','💙','💚','💛','🧡','💜','😀','😂','🥹','😎','🤔','😴','🥳','🤩','😍','🥰'];
 window.openStampPicker = function(e) {
   e.stopPropagation();
   document.querySelectorAll('.stamp-picker').forEach(p => p.remove());
   const picker = document.createElement('div');
   picker.className = 'stamp-picker emoji-picker';
-  picker.style.cssText = 'position:fixed;bottom:80px;right:80px;width:240px;z-index:100;';
+  // ボタンの位置を基準に表示
+  const rect = e.currentTarget.getBoundingClientRect();
+  picker.style.cssText = 'position:fixed;bottom:'+(window.innerHeight-rect.top+8)+'px;right:'+(window.innerWidth-rect.right)+'px;width:240px;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;display:flex;flex-wrap:wrap;gap:4px;box-shadow:0 4px 20px var(--shadow);';
   STAMPS.forEach(s => {
-    const b = document.createElement('button'); b.className = 'emoji-opt'; b.textContent = s;
+    const b = document.createElement('button');
+    b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;padding:6px;border-radius:6px;transition:background .15s;';
+    b.textContent = s;
+    b.onmouseover = () => b.style.background = 'var(--surface2)';
+    b.onmouseout = () => b.style.background = 'none';
     b.onclick = (ev) => {
       ev.stopPropagation();
       const inp = document.getElementById('msg-input');
-      inp.value += s; inp.focus(); picker.remove();
+      inp.value += s; inp.focus();
+      inp.style.height = 'auto';
+      inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
+      picker.remove();
     };
     picker.appendChild(b);
   });
