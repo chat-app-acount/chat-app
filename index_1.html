@@ -1559,6 +1559,7 @@ async function openRoom(id, type) {
 window.openRoom = openRoom;
 
 // ===== MESSAGES =====
+let renderedMsgIds = new Set();
 function listenMessages(roomId, type) {
   const colPath = type === 'room'
     ? collection(db, 'rooms', roomId, 'messages')
@@ -1566,8 +1567,112 @@ function listenMessages(roomId, type) {
   const q = query(colPath, orderBy('ts', 'asc'));
   const container = document.getElementById('messages');
   container.innerHTML = '';
+  renderedMsgIds = new Set();
   if(unsubMessages) unsubMessages();
   unsubMessages = onSnapshot(q, async snap => {
+    const atBot = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    const scrollPos = container.scrollTop; // 現在のスクロール位置を保存
+
+    // 新しいメッセージだけ追加（既存は更新しない）
+    let prev = container.lastChild?.dataset?.author || null;
+    for(const d of snap.docs) {
+      const msg = { id: d.id, ...d.data() };
+      // 既に描画済みのメッセージはスキップ（既読・リアクション更新は別処理）
+      if(renderedMsgIds.has(d.id)) {
+        // 既読数とリアクションだけ更新
+        const existingWrap = container.querySelector(`[data-msgid="${d.id}"]`);
+        if(existingWrap) {
+          const rr = existingWrap.querySelector('.read-receipt');
+          if(rr && msg.readBy && msg.readBy.length > 1) rr.textContent = '既読 ' + (msg.readBy.length - 1);
+          else if(rr && (!msg.readBy || msg.readBy.length <= 1)) rr.textContent = '';
+        }
+        prev = msg.author;
+        continue;
+      }
+      renderedMsgIds.add(d.id);
+
+      if(msg.type === 'system') {
+        const s = document.createElement('div'); s.className = 'system-msg';
+        s.dataset.msgid = d.id;
+        s.innerHTML = '<span>' + escH(msg.text) + '</span>';
+        container.appendChild(s); prev = null; continue;
+      }
+      const u = await getUser(msg.author);
+      const own = msg.author === currentUser.uid;
+      const same = prev === msg.author;
+      const wrap = document.createElement('div'); wrap.className = 'msg-wrap';
+      wrap.dataset.msgid = d.id;
+      wrap.dataset.author = msg.author;
+
+      if(!same) {
+        const group = document.createElement('div'); group.className = 'msg-group';
+        const row = document.createElement('div'); row.className = own ? 'msg-own-row' : 'msg-row';
+        const av = renderAvatar(u, 34);
+        av.onclick = e => window.showProfilePopup(msg.author, e);
+        const ct = document.createElement('div'); ct.className = own ? 'msg-own-content' : 'msg-content';
+        if(msg.replyTo) {
+          const rq = document.createElement('div'); rq.className = 'reply-quote';
+          rq.textContent = msg.replyToText || '元のメッセージ';
+          ct.appendChild(rq);
+        }
+        const meta = document.createElement('div'); meta.className = own ? 'msg-own-meta' : 'msg-meta';
+        const authorSpan = document.createElement('span'); authorSpan.className = 'msg-author';
+        authorSpan.textContent = u.name; authorSpan.style.cursor = 'pointer';
+        authorSpan.onclick = e => window.showProfilePopup(msg.author, e);
+        const timeSpan = document.createElement('span'); timeSpan.className = 'msg-time'; timeSpan.textContent = fmtTime(msg.ts);
+        meta.appendChild(authorSpan); meta.appendChild(timeSpan);
+        const bubble = document.createElement('div'); bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
+        if(!own) bubble.style.background = getUserHighlightColor(u.color || '#888');
+        bubble.textContent = msg.deleted ? '(削除済み)' : msg.text;
+        if(msg.edited && !msg.deleted) { const ed = document.createElement('span'); ed.className = 'msg-edited'; ed.textContent = '(編集済み)'; bubble.appendChild(ed); }
+        ct.appendChild(meta); ct.appendChild(bubble);
+        if(msg.reactions && Object.keys(msg.reactions).length > 0) ct.appendChild(renderReactions(msg, d.id, type));
+        if(own && msg.readBy && msg.readBy.length > 1) {
+          const rr = document.createElement('div'); rr.className = 'read-receipt';
+          rr.textContent = '既読 ' + (msg.readBy.length - 1); ct.appendChild(rr);
+        }
+        row.appendChild(av); row.appendChild(ct);
+        group.appendChild(row);
+        const actions = buildActions(msg, d.id, type, own);
+        wrap.appendChild(group); wrap.appendChild(actions);
+      } else {
+        const cont = document.createElement('div'); cont.className = own ? 'msg-own-continuation' : 'msg-continuation';
+        const bubble = document.createElement('div'); bubble.className = own ? 'msg-own-bubble' : 'msg-bubble';
+        if(!own) bubble.style.background = getUserHighlightColor(u.color || '#888');
+        bubble.textContent = msg.deleted ? '(削除済み)' : msg.text;
+        if(msg.edited && !msg.deleted) { const ed = document.createElement('span'); ed.className = 'msg-edited'; ed.textContent = '(編集済み)'; bubble.appendChild(ed); }
+        cont.appendChild(bubble);
+        if(msg.reactions && Object.keys(msg.reactions).length > 0) cont.appendChild(renderReactions(msg, d.id, type));
+        if(own && msg.readBy && msg.readBy.length > 1) {
+          const rr = document.createElement('div'); rr.className = 'read-receipt';
+          rr.textContent = '既読 ' + (msg.readBy.length - 1); cont.appendChild(rr);
+        }
+        const actions = buildActions(msg, d.id, type, own);
+        wrap.appendChild(cont); wrap.appendChild(actions);
+      }
+      container.appendChild(wrap);
+      wrap.addEventListener('contextmenu', e => showContextMenu(e, msg, d.id, type, own));
+      wrap.addEventListener('touchstart', e => {
+        const timer = setTimeout(() => showContextMenu(e.touches[0], msg, d.id, type, own), 500);
+        wrap.addEventListener('touchend', () => clearTimeout(timer), {once:true});
+        wrap.addEventListener('touchmove', () => clearTimeout(timer), {once:true});
+      });
+      prev = msg.author;
+    }
+
+    // 新しいメッセージなら最下部へ、それ以外はスクロール位置を保持
+    if(atBot) container.scrollTop = container.scrollHeight;
+    else container.scrollTop = scrollPos;
+
+    // 既読処理
+    if(!document.hidden && document.visibilityState === 'visible') {
+      snap.docs.forEach(d => {
+        const msg = d.data();
+        if(msg.type !== 'system' && msg.author !== currentUser.uid) markRead(d.id, type);
+      });
+    }
+  });
+}
     const atBot = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     container.innerHTML = '';
     let prev = null;
@@ -2274,22 +2379,24 @@ function listenHeaderMembers(roomId) {
 const STAMPS = ['🎉','🎊','👏','🙌','💪','🤝','👋','✌️','🤞','💯','🔥','⭐','💫','🌟','❤️','💙','💚','💛','🧡','💜','😀','😂','🥹','😎','🤔','😴','🥳','🤩','😍','🥰'];
 window.openStampPicker = function(e) {
   e.stopPropagation();
-  document.querySelectorAll('.stamp-picker').forEach(p => p.remove());
+  document.querySelectorAll('.stamp-picker-popup').forEach(p => p.remove());
   const picker = document.createElement('div');
-  picker.className = 'stamp-picker emoji-picker';
-  // ボタンの位置を基準に表示
-  const rect = e.currentTarget.getBoundingClientRect();
-  picker.style.cssText = 'position:fixed;bottom:'+(window.innerHeight-rect.top+8)+'px;right:'+(window.innerWidth-rect.right)+'px;width:240px;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;display:flex;flex-wrap:wrap;gap:4px;box-shadow:0 4px 20px var(--shadow);';
+  picker.className = 'stamp-picker-popup';
+  const btn = e.currentTarget || e.target;
+  const rect = btn.getBoundingClientRect();
+  picker.style.cssText = 'position:fixed;bottom:'+(window.innerHeight-rect.top+8)+'px;right:'+(window.innerWidth-rect.right+0)+'px;width:252px;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-wrap:wrap;gap:4px;box-shadow:0 8px 30px var(--shadow);';
   STAMPS.forEach(s => {
     const b = document.createElement('button');
-    b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;padding:6px;border-radius:6px;transition:background .15s;';
+    b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:22px;padding:6px;border-radius:8px;transition:background .15s;line-height:1;';
     b.textContent = s;
     b.onmouseover = () => b.style.background = 'var(--surface2)';
     b.onmouseout = () => b.style.background = 'none';
     b.onclick = (ev) => {
       ev.stopPropagation();
       const inp = document.getElementById('msg-input');
-      inp.value += s; inp.focus();
+      const pos = inp.selectionStart || inp.value.length;
+      inp.value = inp.value.slice(0, pos) + s + inp.value.slice(pos);
+      inp.focus();
       inp.style.height = 'auto';
       inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
       picker.remove();
@@ -2299,9 +2406,43 @@ window.openStampPicker = function(e) {
   document.body.appendChild(picker);
   setTimeout(() => {
     document.addEventListener('click', function handler() {
-      picker.remove(); document.removeEventListener('click', handler);
+      picker.remove();
+      document.removeEventListener('click', handler);
     });
-  }, 0);
+  }, 10);
+};
+
+// ===== ROOM/DM DELETE =====
+window.deleteRoom = async function(roomId) {
+  if(!confirm('このルームを削除しますか？\nメッセージも全て削除されます。')) return;
+  try {
+    // メッセージを削除
+    const msgs = await getDocs(collection(db, 'rooms', roomId, 'messages'));
+    for(const d of msgs.docs) await deleteDoc(d.ref);
+    // ルームを削除
+    await deleteDoc(doc(db, 'rooms', roomId));
+    if(currentRoom === roomId) {
+      currentRoom = null; currentRoomType = null;
+      document.getElementById('chat-view').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'flex';
+    }
+    showToast('ルームを削除しました');
+  } catch(e) { showToast('削除に失敗しました', true); }
+};
+
+window.deleteDM = async function(dmId) {
+  if(!confirm('このDMを削除しますか？')) return;
+  try {
+    const msgs = await getDocs(collection(db, 'dms', dmId, 'messages'));
+    for(const d of msgs.docs) await deleteDoc(d.ref);
+    await deleteDoc(doc(db, 'dms', dmId));
+    if(currentRoom === dmId) {
+      currentRoom = null; currentRoomType = null;
+      document.getElementById('chat-view').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'flex';
+    }
+    showToast('DMを削除しました');
+  } catch(e) { showToast('削除に失敗しました', true); }
 };
 // ===== MOBILE SIDEBAR =====
 window.openMobileSidebar = function() {
