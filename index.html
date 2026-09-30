@@ -535,13 +535,33 @@ function roomMenu(anchor){
     items.push({icon:'copy',label:'ルームIDをコピー（'+r.id+'）',run:()=>copy(r.id,'ルームIDをコピーしました')});
     items.push({icon:'users',label:'メンバーを見る',run:()=>membersModal(r)});
     items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
-    if (r.createdBy === me.uid) items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
+    if (isAdmin(r)) items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
   } else items.push({icon:'trash',label:'このDMを削除',danger:true,run:()=>removeRoom(r)});
   popup(anchor, items);
 }
 async function copy(t, ok){ try{ await navigator.clipboard.writeText(t); toast(ok); }catch(e){ prompt('コピーしてください', t); } }
-function membersModal(r){
-  modal('メンバー', (r.members||[]).map(u => h('div',{class:'urow'}, avatar(u, nameOf(u), true, isOnline(u)), h('div',{class:'n'}, nameOf(u), h('small',{}, (u === r.createdBy ? '作成者・' : '') + (isOnline(u) ? 'オンライン' : 'オフライン'))))));
+const isAdmin = (r, uid=me.uid) => r.createdBy === uid || (r.admins||[]).includes(uid);
+function membersModal(r0){
+  const body = h('div',{style:'display:grid;gap:4px'});
+  const draw = () => {
+    const r = rooms[r0.id] || r0;
+    body.replaceChildren(...(r.members||[]).map(u => {
+      const creator = u === r.createdBy, admin = isAdmin(r, u);
+      const label = (creator ? '作成者' : admin ? '管理者' : '') + (isOnline(u) ? (admin?'・':'')+'オンライン' : (admin?'・':'')+'オフライン');
+      return h('div',{class:'urow'}, avatar(u, nameOf(u), true, isOnline(u)),
+        h('div',{class:'n'}, nameOf(u), h('small',{}, label)),
+        (r.createdBy === me.uid && !creator) ? h('button',{class:'btn ghost',style:'padding:5px 12px;font-size:13px',onclick:async()=>{
+          try {
+            await updateDoc(roomRef(r), {admins: admin ? arrayRemove(u) : arrayUnion(u)});
+            await sysMsg(r, nameOf(u) + (admin ? 'の管理者権限を外しました' : 'を管理者にしました')).catch(()=>{});
+            setTimeout(draw, 400);
+          } catch(e){ toast('変更できませんでした'); }
+        }}, admin ? '管理者を外す' : '管理者にする') : null);
+    }));
+    if (r.createdBy === me.uid) body.append(h('p',{style:'font-size:12px;color:var(--sub);margin-top:8px'},'管理者はルームを削除できます。管理者を決められるのは作成者だけです。'));
+  };
+  draw();
+  modal('メンバー', body);
 }
 async function sysMsg(r, text){ await addDoc(msgCol(r), {type:'system', text, ts:serverTimestamp(), readBy:[], reactions:{}}); }
 
