@@ -176,6 +176,9 @@ input,textarea{font:inherit;color:inherit}
 .hit small{display:block;color:var(--sub);font-size:12px}
 .hit div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [hidden]{display:none!important}
+.side-head .logo{margin-right:2px}
+.side-head .wordmark{flex:1}
+.login-card .logo{margin-bottom:-4px}
 </style>
 </head>
 <body>
@@ -233,6 +236,7 @@ const IC = {
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
 };
 const ico = (n, s=20) => h('span', {class:'ico', html:`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`});
+const logoMark = (n=32) => h('span',{class:'ico logo',html:`<svg width="${n}" height="${n}" viewBox="0 0 1024 1024" aria-hidden="true"><rect width="1024" height="1024" rx="224" fill="#0e7a6d"/><rect x="240" y="270" width="544" height="420" rx="120" fill="#fff"/><path d="M320 660v130l130-110z" fill="#fff"/><circle cx="392" cy="480" r="36" fill="#0e7a6d"/><circle cx="512" cy="480" r="36" fill="#0e7a6d"/><circle cx="632" cy="480" r="36" fill="#0e7a6d"/></svg>`});
 const ms = t => (t && t.toMillis) ? t.toMillis() : (typeof t === 'number' ? t : 0);
 const fmtTime = t => { const v = ms(t); return v ? new Date(v).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) : ''; };
 const fmtList = t => {
@@ -380,7 +384,7 @@ function showLogin(){
     catch(e){ if (e.code === 'auth/popup-blocked') signInWithRedirect(auth, new GoogleAuthProvider()); else fail(e); }
   }},'Googleでログイン');
   app.append(h('div',{class:'login'}, h('div',{class:'login-card'},
-    h('div',{class:'wordmark'},'Chat',h('i',{},'Space')),
+    logoMark(56), h('div',{class:'wordmark'},'Chat',h('i',{},'Space')),
     h('p',{class:'lead'},'友だちとすぐつながれるチャット'),
     google, h('div',{class:'sep'},'または'), nameF, mail, pass, err, go, sw)));
 }
@@ -402,7 +406,7 @@ function startApp(){
     h('div',{class:'shell'},
       h('aside',{class:'side'},
         h('div',{class:'side-head'},
-          h('div',{class:'wordmark'},'Chat',h('i',{},'Space')),
+          logoMark(32), h('div',{class:'wordmark'},'Chat',h('i',{},'Space')),
           h('button',{class:'icon-btn',id:'themeBtn','aria-label':'テーマを切り替え',onclick:cycleTheme}, ico(themeIcon())),
           h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e=>popup(e.currentTarget,[
             {icon:'user',label:'プロフィールを編集',run:profileModal},
