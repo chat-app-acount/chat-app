@@ -5,6 +5,10 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 concurrency:
   group: push
   cancel-in-progress: false
@@ -21,3 +25,8 @@ jobs:
       - run: node .github/scripts/notify.mjs
         env:
           SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Start next run
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run push.yml --ref main
