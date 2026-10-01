@@ -179,6 +179,9 @@ input,textarea{font:inherit;color:inherit}
 .side-head .logo{margin-right:2px}
 .side-head .wordmark{flex:1}
 .login-card .logo{margin-bottom:-4px}
+.nbanner{display:flex;gap:10px;align-items:center;margin:0 12px 8px;padding:8px 8px 8px 12px;border-radius:14px;background:var(--hover);font-size:13px}
+.nbanner span{flex:1;min-width:0}
+.nbanner .btn{padding:6px 12px;font-size:13px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -189,7 +192,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '2.0 (2026-10-01)';
+const VERSION = '2.2 (2026-10-01)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -198,6 +201,8 @@ const firebaseConfig = {
   messagingSenderId: "689926338538",
   appId: "1:689926338538:web:33281528795be00371a493"
 };
+// 通知中継（Cloudflare Workers）のURL。作成後にここへ貼り付けます。空のままなら中継はしません。
+const PUSH_URL = '';
 const VAPID_KEY = 'BFUPo_ieRYgmkTzUA3hRMZTooyvC68Ppzlv1p0lp1fEUbAXe8UQKLUUoWHigILXPOHUSmutXrHoUefy8xCnDIQw';
 
 /* ---------- helpers ---------- */
@@ -415,6 +420,7 @@ function startApp(){
         h('div',{class:'side-actions'},
           h('button',{class:'btn',onclick:roomModal},ico('users',18),'ルーム'),
           h('button',{class:'btn ghost',onclick:dmModal},ico('msg',18),'DM')),
+        h('div',{id:'notifyBanner'}),
         h('div',{class:'filters',id:'filters'}),
         h('div',{class:'room-list',id:'roomList'}),
         h('div',{class:'ver'},'ChatSpace v'+VERSION)),
@@ -426,7 +432,10 @@ function startApp(){
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); });
   document.addEventListener('click', e => { const p = $('#stamps'); if (p && !p.contains(e.target) && !e.target.closest('#stampBtn')) p.classList.remove('show'); });
-  if ('Notification' in window && Notification.permission === 'granted') setupPush(false);
+  autoNotify();
+  navigator.serviceWorker?.addEventListener('message', e => {
+    if (e.data && e.data.type === 'NOTIFICATION_CLICK'){ try{ const id = new URL(e.data.url, location.origin).searchParams.get('room'); if (id && rooms[id]) openRoom(id); }catch(_){} }
+  });
   const room = sessionStorage.getItem('cs_room'), inv = sessionStorage.getItem('cs_invite');
   if (room){ sessionStorage.removeItem('cs_room'); joinByCode(room); }
   if (inv){ sessionStorage.removeItem('cs_invite'); joinByInvite(inv); }
@@ -747,8 +756,16 @@ async function doSend(kind, text){
   if (replyTo){ data.replyTo = replyTo.id; data.replyToText = replyTo.text; replyTo = null; drawReply(); }
   try {
     await addDoc(msgCol(r), data);
+    pushRelay(r, kind==='stamp' ? 'スタンプ '+text : text);
     updateDoc(roomRef(r), {lastMsg: kind==='stamp' ? 'スタンプ '+text : text.slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, ['typing.'+me.uid]:null}).catch(()=>{});
   } catch(e){ console.error(e); toast('送信できませんでした'); }
+}
+async function pushRelay(r, text){
+  if (!PUSH_URL) return;
+  try {
+    const idToken = await me.getIdToken();
+    fetch(PUSH_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({idToken, col:r.col, roomId:r.id, text})}).catch(()=>{});
+  } catch(e){}
 }
 function sendTyping(){
   const r = rooms[cur]; if (!r || Date.now() - lastTypingSent < 2500) return;
@@ -852,21 +869,47 @@ function profileModal(){
 }
 
 /* ---------- notifications ---------- */
-function notify(r){
+async function notify(r){
   const body = r.lastMsg || '新しいメッセージ';
   if (!document.hidden){ toast(roomTitle(r) + ': ' + body.slice(0,30)); return; }
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = {body, icon:'icon-192.png?v=2', badge:'icon-192.png?v=2', tag:r.id, renotify:true, data:{url:'/chat-app/?room='+r.id}};
   try {
-    const n = new Notification(roomTitle(r), {body, icon:'icon-192.png?v=2', tag:r.id});
-    n.onclick = () => { window.focus(); openRoom(r.id); n.close(); };
+    const reg = await navigator.serviceWorker?.ready;
+    if (reg) await reg.showNotification(roomTitle(r), opts);
+    else new Notification(roomTitle(r), opts);
   } catch(e){}
+}
+const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function drawBanner(){
+  const b = $('#notifyBanner'); if (!b) return;
+  b.replaceChildren();
+  if (!('Notification' in window)){
+    if (isIos && !isStandalone && !localStorage.getItem('cs_nb_ios')) b.append(h('div',{class:'nbanner'}, h('span',{},'通知を使うには、共有ボタンから「ホーム画面に追加」して、そのアプリから開いてください。'), h('button',{class:'icon-btn',style:'width:30px;height:30px','aria-label':'閉じる',onclick:()=>{ localStorage.setItem('cs_nb_ios','1'); drawBanner(); }}, ico('x',16))));
+    return;
+  }
+  if (Notification.permission !== 'default') return;
+  b.append(h('div',{class:'nbanner'}, ico('bell',18), h('span',{},'新着メッセージの通知を受け取れます'),
+    h('button',{class:'btn',onclick:()=>setupPush(true)},'オンにする')));
+}
+function autoNotify(){
+  drawBanner();
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted'){ setupPush(false); return; }
+  if (Notification.permission !== 'default') return;
+  // ブラウザの決まりで、許可の確認は画面をタップしたときにしか出せません。最初のタップで自動的に確認を出します。
+  if (isIos && !isStandalone) return;
+  const once = () => { document.removeEventListener('pointerdown', once, true); if (Notification.permission === 'default') setupPush(true); };
+  document.addEventListener('pointerdown', once, true);
 }
 let pushDone = false;
 async function setupPush(interactive){
   if (!('Notification' in window) || !('serviceWorker' in navigator)){ if (interactive) toast('このブラウザは通知に対応していません（iPhoneはホーム画面に追加すると使えます）'); return; }
   let perm = Notification.permission;
   if (perm === 'default' && interactive) perm = await Notification.requestPermission();
-  if (perm !== 'granted'){ if (interactive) toast('通知が許可されていません。ブラウザの設定で許可してください'); return; }
+  drawBanner();
+  if (perm !== 'granted'){ if (interactive && perm === 'denied') toast('通知がブロックされています。ブラウザの設定から許可してください'); return; }
   if (pushDone){ if (interactive) toast('通知はオンです'); return; }
   try {
     const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
