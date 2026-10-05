@@ -184,9 +184,14 @@ input,textarea{font:inherit;color:inherit}
 .nbanner .btn{padding:6px 12px;font-size:13px;white-space:nowrap}
 .bubble.imgb{padding:3px;background:var(--other);border:1px solid var(--line)}
 .msg.mine .bubble.imgb{background:var(--mine)}
-.pic{display:block;max-width:min(260px,100%);max-height:320px;border-radius:15px;object-fit:cover}
-.lb{position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:80;padding:12px;cursor:zoom-out}
-.lb img{max-width:100%;max-height:100%;border-radius:8px}
+.pic{display:block;max-width:min(260px,100%);max-height:360px;border-radius:15px;cursor:zoom-in}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);display:grid;place-items:center;z-index:80;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.lb img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform;touch-action:none;-webkit-user-drag:none}
+.lb-bar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:10px;display:flex;gap:6px;z-index:2}
+.lb-bar button,.lb-bar a{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;line-height:1}
+.lb-bar button:hover,.lb-bar a:hover{background:rgba(255,255,255,.26)}
+.lb-note{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.55);padding:4px 14px;border-radius:999px;font-size:12px;z-index:2}
+.imore{color:var(--sub);line-height:1;padding:0 4px;display:inline-flex;align-items:center}
 </style>
 </head>
 <body>
@@ -197,7 +202,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '2.3 (2026-10-02)';
+const VERSION = '2.4 (2026-10-05)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -243,6 +248,7 @@ const IC = {
   edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   pin:'<path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z"/>',
   search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
 };
@@ -611,10 +617,12 @@ async function removeRoom(r){
   if (!(await confirmBox(dm ? 'DMを削除' : 'ルームを削除', dm ? 'このDMの履歴がすべて消えます。相手側からも消えます。' : 'ルームとメッセージがすべて消えます。メンバー全員から見えなくなります。', '削除する'))) return;
   if (cur === r.id) closeRoom();
   try {
-    for (;;){
-      const s = await getDocs(query(msgCol(r), limit(400)));
-      if (s.empty) break;
-      const b = writeBatch(db); s.docs.forEach(d => b.delete(d.ref)); await b.commit();
+    for (const sub of ['messages','images']){
+      for (;;){
+        const sn = await getDocs(query(collection(db, r.col, r.id, sub), limit(100)));
+        if (sn.empty) break;
+        const b = writeBatch(db); sn.docs.forEach(d => b.delete(d.ref)); await b.commit();
+      }
     }
     await deleteDoc(roomRef(r));
     toast('削除しました');
@@ -695,7 +703,7 @@ function msgEl(id, m){
   const stamp = m.stamp && !m.deleted;
   const pic = !m.deleted && m.hasImage && typeof m.image === 'string' && m.image.startsWith('data:image/');
   el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(pic?' imgb':'')+(m.deleted?' deleted':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
-    m.deleted ? 'メッセージは削除されました' : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像',loading:'lazy'}) : stamp ? m.text : linkify(m.text || '')));
+    m.deleted ? 'メッセージは削除されました' : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像（タップで拡大）',loading:'lazy',onclick:ev=>{ ev.stopPropagation(); openImage(r, id, m); }}) : stamp ? m.text : linkify(m.text || '')));
   if (!m.deleted){
     const rc = h('div',{class:'reacts'});
     Object.entries(m.reactions || {}).forEach(([e, list]) => {
@@ -707,14 +715,14 @@ function msgEl(id, m){
       REACTIONS.map(e => h('button',{'aria-label':'リアクション '+e,onclick:ev=>{ ev.stopPropagation(); el.classList.remove('open'); react(id,e,(m.reactions?.[e]||[]).includes(me.uid)); }}, e)),
       h('span',{class:'sp'}),
       act('reply','返信',()=>setReply(id, m.hasImage ? '画像' : m.text)),
-      pic ? act('search','拡大',()=>lightbox(m.image)) : null,
+      pic ? act('search','拡大',()=>openImage(r, id, m)) : null,
       mine && !m.stamp && !m.hasImage ? act('edit','編集',()=>editMsg(id,m)) : null,
       r && !isDm(r) ? act('pin', r.pinnedMsgId===id ? 'ピン解除' : 'ピン留め',()=>togglePin(id,m)) : null,
       mine ? act('trash','削除',()=>deleteMsg(id),'del') : null);
     el.append(bar);
   }
   const others = (m.readBy||[]).filter(u => u !== m.author).length;
-  el.append(h('div',{class:'info'}, fmtTime(m.ts), m.edited && !m.deleted ? '編集済み' : null, mine && others && !m.deleted ? (r && isDm(r) ? '既読' : '既読 '+others) : null));
+  el.append(h('div',{class:'info'}, pic ? h('button',{class:'imore','aria-label':'メニューを開く',onclick:toggle}, ico('more',16)) : null, fmtTime(m.ts), m.edited && !m.deleted ? '編集済み' : null, mine && others && !m.deleted ? (r && isDm(r) ? '既読' : '既読 '+others) : null));
   return el;
 }
 const mref = id => doc(db, rooms[cur].col, cur, 'messages', id);
@@ -729,7 +737,7 @@ function editMsg(id, m){
 }
 async function deleteMsg(id){
   if (!(await confirmBox('メッセージを削除','このメッセージを削除しますか？','削除する'))) return;
-  try { await updateDoc(mref(id), {text:'(削除済み)', deleted:true, hasImage:false, image:deleteField()}); } catch(e){ toast('削除できませんでした'); }
+  try { await updateDoc(mref(id), {text:'(削除済み)', deleted:true, hasImage:false, hasFull:false, image:deleteField()}); deleteDoc(doc(db, rooms[cur].col, cur, 'images', id)).catch(()=>{}); } catch(e){ toast('削除できませんでした'); }
 }
 async function togglePin(id, m){
   const r = rooms[cur]; const pinned = r.pinnedMsgId === id;
@@ -793,25 +801,97 @@ async function doSend(kind, text){
     updateDoc(roomRef(r), {lastMsg: kind==='stamp' ? 'スタンプ '+text : text.slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, ['typing.'+me.uid]:null}).catch(()=>{});
   } catch(e){ console.error(e); toast('送信できませんでした'); }
 }
-function lightbox(src){
-  const ov = h('div',{class:'lb',onclick:()=>ov.remove()}, h('img',{src,alt:'拡大した画像'}));
+const fullCache = new Map();
+function openImage(r, mid, m){
+  const ov = h('div',{class:'lb'});
+  const img = h('img',{src:m.image,alt:'画像',draggable:'false'});
+  const note = h('div',{class:'lb-note',hidden:true},'高画質を読み込み中…');
+  let sc = 1, tx = 0, ty = 0, moved = false, lastTap = 0, startDist = 0, startSc = 1;
+  const pts = new Map();
+  const apply = () => { if (sc <= 1){ tx = 0; ty = 0; } img.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; };
+  const zoomAt = (ns, cx, cy) => {
+    ns = Math.min(8, Math.max(1, ns));
+    const rc = ov.getBoundingClientRect(), px = cx - rc.left - rc.width / 2, py = cy - rc.top - rc.height / 2;
+    tx = px - (px - tx) * (ns / sc); ty = py - (py - ty) * (ns / sc); sc = ns; apply();
+  };
+  const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  const dl = h('a',{'aria-label':'保存',title:'保存',download:'chatspace-image',href:m.image}, ico('download',20));
+  const bar = h('div',{class:'lb-bar'},
+    h('button',{'aria-label':'縮小',onclick:e=>{ e.stopPropagation(); zoomAt(sc/1.5, innerWidth/2, innerHeight/2); }},'−'),
+    h('button',{'aria-label':'拡大',onclick:e=>{ e.stopPropagation(); zoomAt(sc*1.5, innerWidth/2, innerHeight/2); }},'+'),
+    dl,
+    h('button',{'aria-label':'閉じる',onclick:close}, ico('x',22)));
+  ov.addEventListener('pointerdown', e => {
+    if (e.target.closest('.lb-bar')) return;
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved = false;
+    if (pts.size === 2){ const [p, q] = [...pts.values()]; startDist = Math.hypot(p.x - q.x, p.y - q.y); startSc = sc; }
+  });
+  ov.addEventListener('pointermove', e => {
+    const p = pts.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (pts.size === 2){
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (startDist) zoomAt(startSc * d / startDist, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      moved = true;
+    } else {
+      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      if (sc > 1){ tx += dx; ty += dy; apply(); }
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    }
+  });
+  const up = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size === 0 && !moved && !e.target.closest('.lb-bar')){
+      const now = Date.now();
+      if (e.target === img && now - lastTap < 320){ sc > 1 ? (sc = 1, apply()) : zoomAt(2.5, e.clientX, e.clientY); lastTap = 0; }
+      else if (e.target === img) lastTap = now;
+      else if (e.target === ov) close();
+    }
+  };
+  ov.addEventListener('pointerup', up);
+  ov.addEventListener('pointercancel', up);
+  ov.addEventListener('wheel', e => { e.preventDefault(); zoomAt(sc * (e.deltaY < 0 ? 1.2 : 1 / 1.2), e.clientX, e.clientY); }, {passive:false});
+  ov.append(img, bar, note);
   document.body.append(ov);
+  if (m.hasFull){
+    const key = r.col + '/' + r.id + '/' + mid;
+    const show = data => { if (!ov.isConnected) return; img.src = data; dl.href = data; note.hidden = true; };
+    if (fullCache.has(key)) show(fullCache.get(key));
+    else {
+      note.hidden = false;
+      getDoc(doc(db, r.col, r.id, 'images', mid)).then(sn => {
+        if (sn.exists() && typeof sn.data().data === 'string' && sn.data().data.startsWith('data:image/')){ fullCache.set(key, sn.data().data); show(sn.data().data); }
+        else note.hidden = true;
+      }).catch(() => { note.textContent = '高画質を読み込めませんでした'; setTimeout(() => note.hidden = true, 2500); });
+    }
+  }
 }
 async function compressImage(file){
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load')); i.src = url; });
-    let max = 1280, q = 0.78;
-    for (let n = 0; n < 6; n++){
-      const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const type = (() => { const c = document.createElement('canvas'); c.width = c.height = 1; return c.toDataURL('image/webp').startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg'; })();
+    const draw = (edge, q) => {
+      const sc = Math.min(1, edge / Math.max(W, H));
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+      c.width = Math.max(1, Math.round(W * sc)); c.height = Math.max(1, Math.round(H * sc));
       const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-      const out = c.toDataURL('image/jpeg', q);
-      if (out.length <= 650000) return out;
-      max = Math.round(max * 0.8); q = Math.max(0.5, q - 0.08);
+      return c.toDataURL(type, q);
+    };
+    let full = null;
+    outer: for (const edge of [2560, 2048, 1600, 1280, 1024]){
+      for (const q of [0.85, 0.75, 0.65]){ const out = draw(edge, q); if (out.length <= 880000){ full = out; break outer; } }
     }
-    throw new Error('too big');
+    if (!full) throw new Error('too big');
+    let thumb = null;
+    for (const [edge, q] of [[640, 0.72], [480, 0.65], [360, 0.6]]){ thumb = draw(edge, q); if (thumb.length <= 90000) break; }
+    return {full, thumb};
   } finally { URL.revokeObjectURL(url); }
 }
 async function sendImage(file){
@@ -819,12 +899,16 @@ async function sendImage(file){
   if (!isDm(r) && r.imageAdminOnly && !isAdmin(r)) return toast('このルームでは、画像を送れるのは管理者だけです');
   if (!file.type.startsWith('image/')) return toast('画像ファイルを選んでください');
   toast('画像を準備しています…');
-  let dataUrl;
-  try { dataUrl = await compressImage(file); } catch(e){ return toast('この画像は読み込めませんでした'); }
-  const data = {author:me.uid, text:'', image:dataUrl, hasImage:true, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
+  let pic;
+  try { pic = await compressImage(file); } catch(e){ return toast('この画像は読み込めませんでした'); }
+  const ref = doc(msgCol(r));
+  const data = {author:me.uid, text:'', image:pic.thumb, hasImage:true, hasFull:true, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
   if (replyTo){ data.replyTo = replyTo.id; data.replyToText = replyTo.text; replyTo = null; drawReply(); }
   try {
-    await addDoc(msgCol(r), data);
+    const b = writeBatch(db);
+    b.set(ref, data);
+    b.set(doc(db, r.col, r.id, 'images', ref.id), {data:pic.full, author:me.uid, ts:serverTimestamp()});
+    await b.commit();
     pushRelay(r, '画像を送信しました');
     updateDoc(roomRef(r), {lastMsg:'画像を送信しました', lastMsgTs:serverTimestamp(), lastUid:me.uid}).catch(()=>{});
   } catch(e){ console.error(e); toast('画像を送信できませんでした'); }
