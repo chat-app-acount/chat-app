@@ -182,6 +182,11 @@ input,textarea{font:inherit;color:inherit}
 .nbanner{display:flex;gap:10px;align-items:center;margin:0 12px 8px;padding:8px 8px 8px 12px;border-radius:14px;background:var(--hover);font-size:13px}
 .nbanner span{flex:1;min-width:0}
 .nbanner .btn{padding:6px 12px;font-size:13px;white-space:nowrap}
+.bubble.imgb{padding:3px;background:var(--other);border:1px solid var(--line)}
+.msg.mine .bubble.imgb{background:var(--mine)}
+.pic{display:block;max-width:min(260px,100%);max-height:320px;border-radius:15px;object-fit:cover}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:80;padding:12px;cursor:zoom-out}
+.lb img{max-width:100%;max-height:100%;border-radius:8px}
 </style>
 </head>
 <body>
@@ -190,9 +195,9 @@ input,textarea{font:inherit;color:inherit}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '2.2 (2026-10-01)';
+const VERSION = '2.3 (2026-10-02)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -238,6 +243,7 @@ const IC = {
   edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   pin:'<path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z"/>',
   search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
 };
 const ico = (n, s=20) => h('span', {class:'ico', html:`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`});
@@ -470,7 +476,7 @@ function listenRooms(){
     }
     bucket[col] = next; loaded[col] = true;
     rooms = {...bucket.rooms, ...bucket.dms};
-    if (cur && !rooms[cur] && loaded.rooms && loaded.dms) closeRoom();
+    if (cur && !rooms[cur] && loaded.rooms && loaded.dms){ toast('このルームは利用できなくなりました'); closeRoom(); }
     if (cur && rooms[cur]){ readMap[cur] = Date.now(); saveRead(); }
     renderRooms(); renderHeader();
   }, e => { console.error(col, e); toast('一覧を読み込めません（Firestoreのルールを確認してください）'); });
@@ -547,7 +553,8 @@ function roomMenu(anchor){
     items.push({icon:'link',label:'共有リンクをコピー',run:()=>copy(location.origin+location.pathname+'?room='+r.id,'共有リンクをコピーしました')});
     items.push({icon:'copy',label:'ルームIDをコピー（'+r.id+'）',run:()=>copy(r.id,'ルームIDをコピーしました')});
     items.push({icon:'users',label:'メンバーを見る',run:()=>membersModal(r)});
-    items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
+    if (r.createdBy !== me.uid) items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
+    if (isAdmin(r)) items.push({icon:'image',label:r.imageAdminOnly ? '画像送信を全員に許可する' : '画像送信を管理者だけにする',run:()=>updateDoc(roomRef(r),{imageAdminOnly:!r.imageAdminOnly}).then(()=>toast(r.imageAdminOnly ? '画像送信を全員に許可しました' : '画像送信を管理者だけにしました')).catch(()=>toast('変更できませんでした'))});
     if (isAdmin(r)) items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
   } else items.push({icon:'trash',label:'このDMを削除',danger:true,run:()=>removeRoom(r)});
   popup(anchor, items);
@@ -556,25 +563,46 @@ async function copy(t, ok){ try{ await navigator.clipboard.writeText(t); toast(o
 const isAdmin = (r, uid=me.uid) => r.createdBy === uid || (r.admins||[]).includes(uid);
 function membersModal(r0){
   const body = h('div',{style:'display:grid;gap:4px'});
+  const btn = (label, cls, fn) => h('button',{class:'btn '+cls,style:'padding:5px 12px;font-size:13px',onclick:fn}, label);
   const draw = () => {
     const r = rooms[r0.id] || r0;
+    const iAmCreator = r.createdBy === me.uid, iAmAdmin = isAdmin(r);
     body.replaceChildren(...(r.members||[]).map(u => {
       const creator = u === r.createdBy, admin = isAdmin(r, u);
       const label = (creator ? '作成者' : admin ? '管理者' : '') + (isOnline(u) ? (admin?'・':'')+'オンライン' : (admin?'・':'')+'オフライン');
+      const acts = [];
+      if (iAmCreator && !creator) acts.push(btn(admin ? '管理者を外す' : '管理者にする', 'ghost', async()=>{
+        try {
+          await updateDoc(roomRef(r), {admins: admin ? arrayRemove(u) : arrayUnion(u)});
+          await sysMsg(r, nameOf(u) + (admin ? 'の管理者権限を外しました' : 'を管理者にしました')).catch(()=>{});
+          setTimeout(draw, 400);
+        } catch(e){ toast('変更できませんでした'); }
+      }));
+      if (iAmAdmin && u !== me.uid && !creator && (iAmCreator || !admin)) acts.push(btn('BAN', 'danger', () => banMember(r, u, draw)));
       return h('div',{class:'urow'}, avatar(u, nameOf(u), true, isOnline(u)),
         h('div',{class:'n'}, nameOf(u), h('small',{}, label)),
-        (r.createdBy === me.uid && !creator) ? h('button',{class:'btn ghost',style:'padding:5px 12px;font-size:13px',onclick:async()=>{
-          try {
-            await updateDoc(roomRef(r), {admins: admin ? arrayRemove(u) : arrayUnion(u)});
-            await sysMsg(r, nameOf(u) + (admin ? 'の管理者権限を外しました' : 'を管理者にしました')).catch(()=>{});
-            setTimeout(draw, 400);
-          } catch(e){ toast('変更できませんでした'); }
-        }}, admin ? '管理者を外す' : '管理者にする') : null);
+        acts.length ? h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end'}, acts) : null);
     }));
-    if (r.createdBy === me.uid) body.append(h('p',{style:'font-size:12px;color:var(--sub);margin-top:8px'},'管理者はルームを削除できます。管理者を決められるのは作成者だけです。'));
+    const banned = r.banned || [];
+    if (iAmAdmin && banned.length){
+      body.append(h('div',{style:'margin-top:10px;font-weight:700;font-size:13px;color:var(--sub)'},'BANしたメンバー'),
+        ...banned.map(u => h('div',{class:'urow'}, avatar(u, nameOf(u), true, false), h('div',{class:'n'}, nameOf(u)),
+          btn('解除', 'ghost', async()=>{ try { await updateDoc(roomRef(r), {banned: arrayRemove(u)}); toast('BANを解除しました'); setTimeout(draw, 400); } catch(e){ toast('解除できませんでした'); } }))));
+    }
+    if (iAmAdmin) body.append(h('p',{style:'font-size:12px;color:var(--sub);margin-top:8px'},'管理者は、ルームの削除とメンバーのBANができます。管理者を決められるのは作成者だけです。'));
   };
   draw();
   modal('メンバー', body);
+}
+async function banMember(r, u, redraw){
+  if (!(await confirmBox('メンバーをBAN', nameOf(u) + 'さんをこのルームから外して、もう入れないようにします。', 'BANする'))) return;
+  try {
+    await sysMsg(r, nameOf(u) + 'がBANされました').catch(()=>{});
+    const upd = {members: arrayRemove(u), banned: arrayUnion(u)};
+    if ((r.admins||[]).includes(u)) upd.admins = arrayRemove(u);
+    await updateDoc(roomRef(r), upd);
+    toast('BANしました'); setTimeout(redraw, 500);
+  } catch(e){ console.error(e); toast('BANできませんでした（Firestoreのルールを確認してください）'); }
 }
 async function sysMsg(r, text){ await addDoc(msgCol(r), {type:'system', text, ts:serverTimestamp(), readBy:[], reactions:{}}); }
 
@@ -665,8 +693,9 @@ function msgEl(id, m){
     el.classList.toggle('open');
   };
   const stamp = m.stamp && !m.deleted;
-  el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(m.deleted?' deleted':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
-    m.deleted ? 'メッセージは削除されました' : stamp ? m.text : linkify(m.text || '')));
+  const pic = !m.deleted && m.hasImage && typeof m.image === 'string' && m.image.startsWith('data:image/');
+  el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(pic?' imgb':'')+(m.deleted?' deleted':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
+    m.deleted ? 'メッセージは削除されました' : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像',loading:'lazy'}) : stamp ? m.text : linkify(m.text || '')));
   if (!m.deleted){
     const rc = h('div',{class:'reacts'});
     Object.entries(m.reactions || {}).forEach(([e, list]) => {
@@ -677,8 +706,9 @@ function msgEl(id, m){
     const bar = h('div',{class:'bar'},
       REACTIONS.map(e => h('button',{'aria-label':'リアクション '+e,onclick:ev=>{ ev.stopPropagation(); el.classList.remove('open'); react(id,e,(m.reactions?.[e]||[]).includes(me.uid)); }}, e)),
       h('span',{class:'sp'}),
-      act('reply','返信',()=>setReply(id, m.stamp ? m.text : m.text)),
-      mine && !m.stamp ? act('edit','編集',()=>editMsg(id,m)) : null,
+      act('reply','返信',()=>setReply(id, m.hasImage ? '画像' : m.text)),
+      pic ? act('search','拡大',()=>lightbox(m.image)) : null,
+      mine && !m.stamp && !m.hasImage ? act('edit','編集',()=>editMsg(id,m)) : null,
       r && !isDm(r) ? act('pin', r.pinnedMsgId===id ? 'ピン解除' : 'ピン留め',()=>togglePin(id,m)) : null,
       mine ? act('trash','削除',()=>deleteMsg(id),'del') : null);
     el.append(bar);
@@ -699,7 +729,7 @@ function editMsg(id, m){
 }
 async function deleteMsg(id){
   if (!(await confirmBox('メッセージを削除','このメッセージを削除しますか？','削除する'))) return;
-  try { await updateDoc(mref(id), {text:'(削除済み)', deleted:true}); } catch(e){ toast('削除できませんでした'); }
+  try { await updateDoc(mref(id), {text:'(削除済み)', deleted:true, hasImage:false, image:deleteField()}); } catch(e){ toast('削除できませんでした'); }
 }
 async function togglePin(id, m){
   const r = rooms[cur]; const pinned = r.pinnedMsgId === id;
@@ -740,6 +770,9 @@ function composer(){
     h('div',{class:'sgrid'}, STAMPS[active].split(' ').map(s => h('button',{'aria-label':'スタンプ '+s,onclick:e=>{ e.stopPropagation(); doSend('stamp', s); panel.classList.remove('show'); }}, s))));
   drawPanel();
   const stampBtn = h('button',{class:'icon-btn',id:'stampBtn','aria-label':'スタンプ',onclick:e=>{ e.stopPropagation(); panel.classList.toggle('show'); }}, ico('smile',24));
+  const fileIn = h('input',{type:'file',accept:'image/*',hidden:true,onchange:e=>{ const f = e.target.files[0]; e.target.value=''; if (f) sendImage(f); }});
+  const imgBtn = h('button',{class:'icon-btn','aria-label':'画像を送る',onclick:()=>{ const r = rooms[cur]; if (r && !isDm(r) && r.imageAdminOnly && !isAdmin(r)) return toast('このルームでは、画像を送れるのは管理者だけです'); fileIn.click(); }}, ico('image',24));
+  ta.addEventListener('paste', e => { const f = [...(e.clipboardData?.files||[])].find(x => x.type.startsWith('image/')); if (f){ e.preventDefault(); sendImage(f); } });
   const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,140) + 'px'; sendBtn.disabled = !ta.value.trim(); };
   const submit = () => { const t = ta.value; if (!t.trim()) return; ta.value = ''; fit(); doSend('text', t); if (!isMobile) ta.focus(); };
   ta.addEventListener('input', () => { fit(); sendTyping(); });
@@ -747,7 +780,7 @@ function composer(){
   ta.addEventListener('focus', () => panel.classList.remove('show'));
   sendBtn.addEventListener('click', submit);
   const rb = h('div',{class:'replybar',id:'replyBar',hidden:true});
-  return h('div',{class:'composer'}, panel, rb, h('div',{class:'crow'}, stampBtn, ta, sendBtn));
+  return h('div',{class:'composer'}, panel, rb, h('div',{class:'crow'}, stampBtn, imgBtn, fileIn, ta, sendBtn));
 }
 async function doSend(kind, text){
   text = String(text).trim(); const r = rooms[cur]; if (!text || !r) return;
@@ -759,6 +792,42 @@ async function doSend(kind, text){
     pushRelay(r, kind==='stamp' ? 'スタンプ '+text : text);
     updateDoc(roomRef(r), {lastMsg: kind==='stamp' ? 'スタンプ '+text : text.slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, ['typing.'+me.uid]:null}).catch(()=>{});
   } catch(e){ console.error(e); toast('送信できませんでした'); }
+}
+function lightbox(src){
+  const ov = h('div',{class:'lb',onclick:()=>ov.remove()}, h('img',{src,alt:'拡大した画像'}));
+  document.body.append(ov);
+}
+async function compressImage(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load')); i.src = url; });
+    let max = 1280, q = 0.78;
+    for (let n = 0; n < 6; n++){
+      const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      const out = c.toDataURL('image/jpeg', q);
+      if (out.length <= 650000) return out;
+      max = Math.round(max * 0.8); q = Math.max(0.5, q - 0.08);
+    }
+    throw new Error('too big');
+  } finally { URL.revokeObjectURL(url); }
+}
+async function sendImage(file){
+  const r = rooms[cur]; if (!r) return;
+  if (!isDm(r) && r.imageAdminOnly && !isAdmin(r)) return toast('このルームでは、画像を送れるのは管理者だけです');
+  if (!file.type.startsWith('image/')) return toast('画像ファイルを選んでください');
+  toast('画像を準備しています…');
+  let dataUrl;
+  try { dataUrl = await compressImage(file); } catch(e){ return toast('この画像は読み込めませんでした'); }
+  const data = {author:me.uid, text:'', image:dataUrl, hasImage:true, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
+  if (replyTo){ data.replyTo = replyTo.id; data.replyToText = replyTo.text; replyTo = null; drawReply(); }
+  try {
+    await addDoc(msgCol(r), data);
+    pushRelay(r, '画像を送信しました');
+    updateDoc(roomRef(r), {lastMsg:'画像を送信しました', lastMsgTs:serverTimestamp(), lastUid:me.uid}).catch(()=>{});
+  } catch(e){ console.error(e); toast('画像を送信できませんでした'); }
 }
 async function pushRelay(r, text){
   if (!PUSH_URL) return;
@@ -814,6 +883,7 @@ async function joinByCode(input){
     const snap = await getDoc(doc(db,'rooms',id));
     if (!snap.exists()){ toast('そのルームは見つかりません'); return false; }
     const room = snap.data();
+    if ((room.banned||[]).includes(me.uid)){ toast('このルームには参加できません'); return false; }
     if (!(room.members||[]).includes(me.uid)){
       await updateDoc(doc(db,'rooms',id), {members: arrayUnion(me.uid)});
       await addDoc(collection(db,'rooms',id,'messages'), {type:'system', text:myName()+'が参加しました', ts:serverTimestamp(), readBy:[], reactions:{}});
