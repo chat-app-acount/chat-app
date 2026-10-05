@@ -202,7 +202,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '2.4 (2026-10-05)';
+const VERSION = '2.6 (2026-10-05)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -319,6 +319,7 @@ let readMap = {}; try { readMap = JSON.parse(localStorage.getItem('cs_read') || 
 let typingTimer = null, lastTypingSent = 0, pendingRead = new Set();
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
+const inFocus = () => !document.hidden && document.hasFocus();
 const isDm = r => r.col === 'dms';
 const myName = () => users[me?.uid]?.name || me?.displayName || pendingName || (me?.email||'').split('@')[0] || 'ゲスト';
 const nameOf = uid => users[uid]?.name || '不明';
@@ -428,6 +429,7 @@ function startApp(){
           h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e=>popup(e.currentTarget,[
             {icon:'user',label:'プロフィールを編集',run:profileModal},
             {icon:'bell',label:'通知をオンにする',run:()=>setupPush(true)},
+            {icon:'bell',label:'通知をテストする',run:testPush},
             {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
         h('div',{class:'side-actions'},
           h('button',{class:'btn',onclick:roomModal},ico('users',18),'ルーム'),
@@ -442,6 +444,7 @@ function startApp(){
   const beat = () => { if (me && !document.hidden) updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); };
   hb = setInterval(beat, 30000);
   document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('focus', onVisible);
   window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); });
   document.addEventListener('click', e => { const p = $('#stamps'); if (p && !p.contains(e.target) && !e.target.closest('#stampBtn')) p.classList.remove('show'); });
   autoNotify();
@@ -478,7 +481,7 @@ function listenRooms(){
     snap.forEach(d => next[d.id] = {id:d.id, col, ...d.data({serverTimestamps:'estimate'})});
     if (loaded[col]) for (const r of Object.values(next)){
       const p = bucket[col][r.id];
-      if (p && ms(r.lastMsgTs) > ms(p.lastMsgTs) && r.lastUid && r.lastUid !== me.uid && (document.hidden || r.id !== cur)) notify(r);
+      if (p && ms(r.lastMsgTs) > ms(p.lastMsgTs) && r.lastUid && r.lastUid !== me.uid && (!inFocus() || r.id !== cur)) notify(r);
     }
     bucket[col] = next; loaded[col] = true;
     rooms = {...bucket.rooms, ...bucket.dms};
@@ -671,7 +674,7 @@ function subscribeMessages(id){
 }
 async function flushRead(){
   const r = rooms[cur];
-  if (document.hidden || !r || !pendingRead.size) return;
+  if (!inFocus() || !r || !pendingRead.size) return;
   const ids = [...pendingRead]; pendingRead.clear();
   try {
     const b = writeBatch(db);
@@ -1025,7 +1028,8 @@ function profileModal(){
 /* ---------- notifications ---------- */
 async function notify(r){
   const body = r.lastMsg || '新しいメッセージ';
-  if (!document.hidden){ toast(roomTitle(r) + ': ' + body.slice(0,30)); return; }
+  if (inFocus()){ toast(roomTitle(r) + ': ' + body.slice(0,30)); return; }
+  if (document.hidden && pushDone) return; // 画面が隠れているときは、プッシュ通知が届く（二重に出さない）
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const opts = {body, icon:'icon-192.png?v=2', badge:'icon-192.png?v=2', tag:r.id, renotify:true, data:{url:'/chat-app/?room='+r.id}};
   try {
@@ -1058,6 +1062,20 @@ function autoNotify(){
   document.addEventListener('pointerdown', once, true);
 }
 let pushDone = false;
+async function testPush(){
+  if (!PUSH_URL) return toast('通知の中継URL（PUSH_URL）がまだ設定されていません');
+  await setupPush(true);
+  if (!pushDone) return;
+  try {
+    const idToken = await me.getIdToken();
+    const r = await fetch(PUSH_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({idToken, test:true})});
+    const j = await r.json();
+    if (j.error) return toast('中継でエラー: ' + j.error);
+    if (!j.tokens) return toast('この端末が登録されていません。通知をオンにし直してください');
+    if (!j.sent) return toast('送信に失敗しました: ' + ((j.errors && j.errors[0]) || '').slice(0, 80));
+    toast('テスト通知を送りました。数秒待ってください（画面を別のタブにすると見えやすいです）');
+  } catch(e){ toast('中継に接続できません。URLを確認してください'); }
+}
 async function setupPush(interactive){
   if (!('Notification' in window) || !('serviceWorker' in navigator)){ if (interactive) toast('このブラウザは通知に対応していません（iPhoneはホーム画面に追加すると使えます）'); return; }
   let perm = Notification.permission;
