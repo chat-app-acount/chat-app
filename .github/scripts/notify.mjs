@@ -81,6 +81,7 @@ async function poll() {
         method: 'POST', headers: H,
         body: JSON.stringify({ structuredQuery: {
           from: [{ collectionId: 'messages' }],
+          select: { fields: ['type','author','text','stamp','deleted','readBy','hasImage'].map(f => ({ fieldPath: f })) },
           where: { fieldFilter: { field: { fieldPath: 'ts' }, op: 'GREATER_THAN', value: { timestampValue: last } } },
           orderBy: [{ field: { fieldPath: 'ts' }, direction: 'ASCENDING' }],
           limit: 50
@@ -91,7 +92,7 @@ async function poll() {
         const m = r2.document && r2.document.fields; if (!m) continue;
         if (str(m.type) === 'system' || (m.deleted && m.deleted.booleanValue)) continue;
         const author = str(m.author), readBy = strs(m.readBy);
-        const text = (m.stamp && m.stamp.booleanValue ? 'スタンプ ' : '') + str(m.text);
+        const text = m.hasImage && m.hasImage.booleanValue ? '画像を送信しました' : (m.stamp && m.stamp.booleanValue ? 'スタンプ ' : '') + str(m.text);
         for (const u of members) {
           if (u === author || readBy.includes(u)) continue;
           (todo[u] = todo[u] || []).push({ col, roomId, roomName: str(f.name), author, text });
