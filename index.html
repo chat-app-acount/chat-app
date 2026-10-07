@@ -202,7 +202,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '2.6 (2026-10-05)';
+const VERSION = '2.7 (2026-10-07)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -429,7 +429,7 @@ function startApp(){
           h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e=>popup(e.currentTarget,[
             {icon:'user',label:'プロフィールを編集',run:profileModal},
             {icon:'bell',label:'通知をオンにする',run:()=>setupPush(true)},
-            {icon:'bell',label:'通知をテストする',run:testPush},
+            {icon:'bell',label:'通知の状態を確認',run:notifyDiag},
             {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
         h('div',{class:'side-actions'},
           h('button',{class:'btn',onclick:roomModal},ico('users',18),'ルーム'),
@@ -1060,6 +1060,50 @@ function autoNotify(){
   if (isIos && !isStandalone) return;
   const once = () => { document.removeEventListener('pointerdown', once, true); if (Notification.permission === 'default') setupPush(true); };
   document.addEventListener('pointerdown', once, true);
+}
+async function notifyDiag(){
+  const box = h('div',{style:'display:grid;gap:6px'});
+  const row = (k, v, ok) => box.append(h('div',{class:'urow',style:'align-items:flex-start'},
+    h('div',{class:'n'}, k, h('small',{style:'white-space:pre-wrap;word-break:break-all'}, v)),
+    h('span',{style:'font-weight:700;color:'+(ok===true?'var(--accent)':ok===false?'var(--danger)':'var(--sub)')}, ok===true?'OK':ok===false?'要確認':'')));
+  const btns = h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:6px'});
+  modal('通知の状態', [box, btns]);
+  const perm = 'Notification' in window ? Notification.permission : '非対応';
+  row('許可', perm === 'granted' ? '許可されています' : perm, perm === 'granted');
+  let reg = null;
+  try { reg = await navigator.serviceWorker.getRegistration(); } catch(e){}
+  row('Service Worker', reg ? ('登録済み：' + reg.scope) : '登録されていません', !!reg);
+  let token = null, messaging = null, mod = null;
+  try {
+    mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
+    messaging = mod.getMessaging(fb);
+    reg = await navigator.serviceWorker.ready;
+    token = await mod.getToken(messaging, {vapidKey:VAPID_KEY, serviceWorkerRegistration:reg});
+    row('この端末の通知トークン', token ? ('取得できました（末尾 …' + token.slice(-8) + '）') : '取得できませんでした', !!token);
+  } catch(e){ row('この端末の通知トークン', '取得に失敗：' + (e.code || '') + ' ' + (e.message || e), false); }
+  try {
+    const snap = await getDoc(doc(db,'users',me.uid));
+    const list = (snap.data() || {}).fcmTokens || [];
+    const has = token && list.includes(token);
+    if (token && !has){ await updateDoc(doc(db,'users',me.uid), {fcmTokens: arrayUnion(token)}); row('サーバーへの登録', 'この端末が未登録だったので、今、登録しました。もう一度テストしてみてください', true); }
+    else row('サーバーへの登録', has ? '登録されています（登録済みの端末：' + list.length + '台）' : '登録されていません', !!has);
+  } catch(e){ row('サーバーへの登録', '確認に失敗：' + (e.message || e), false); }
+  btns.append(
+    h('button',{class:'btn',onclick:async()=>{
+      try { const r = await navigator.serviceWorker.ready; await r.showNotification('ChatSpace', {body:'この端末の通知テストです。これが見えれば、表示はできています', icon:'icon-192.png?v=2', tag:'diag'}); toast('通知を出しました。見えますか？'); }
+      catch(e){ toast('通知を出せませんでした：' + (e.message || e)); }
+    }}, 'この端末に通知を出してみる'),
+    h('button',{class:'btn ghost',onclick:async()=>{
+      try {
+        if (!mod) return toast('先に上の項目を確認してください');
+        try { await mod.deleteToken(messaging); } catch(_){}
+        const nt = await mod.getToken(messaging, {vapidKey:VAPID_KEY, serviceWorkerRegistration:await navigator.serviceWorker.ready});
+        const ups = {fcmTokens: arrayUnion(nt)};
+        await updateDoc(doc(db,'users',me.uid), ups);
+        if (token && token !== nt) await updateDoc(doc(db,'users',me.uid), {fcmTokens: arrayRemove(token)});
+        token = nt; toast('通知を登録し直しました');
+      } catch(e){ toast('登録し直せませんでした：' + (e.message || e)); }
+    }}, '通知を登録し直す'));
 }
 let pushDone = false;
 async function testPush(){
