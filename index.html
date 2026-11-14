@@ -192,6 +192,21 @@ input,textarea{font:inherit;color:inherit}
 .lb-bar button:hover,.lb-bar a:hover{background:rgba(255,255,255,.26)}
 .lb-note{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.55);padding:4px 14px;border-radius:999px;font-size:12px;z-index:2}
 .imore{color:var(--sub);line-height:1;padding:0 4px;display:inline-flex;align-items:center}
+.callov{position:fixed;inset:0;background:rgba(8,18,16,.97);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:90;padding:24px;text-align:center}
+.callov .avatar{width:104px;height:104px;font-size:44px;margin-bottom:6px}
+.callov .cname{font-size:24px;font-weight:700}
+.callov .cstat{color:rgba(255,255,255,.7);min-height:24px}
+.cbtns{display:flex;gap:34px;margin-top:34px}
+.cbtn{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.cbtn.on{background:#fff;color:#111}
+.cbtn.red{background:#dc2626}.cbtn.green{background:#16a34a}
+.cbtn.red .ico{transform:rotate(135deg)}
+.gl{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;max-width:440px;margin-top:6px}
+.gl .gp{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;width:88px;overflow:hidden}
+.callov .gl .avatar{width:58px;height:58px;font-size:24px;margin:0}
+.gl .gp small{color:rgba(255,255,255,.65);font-size:11px}
+.callbar{display:flex;gap:10px;align-items:center;padding:8px 14px;background:var(--accent);color:var(--accent-ink);font-size:14px;cursor:pointer;width:100%;text-align:left}
+.callbar span{flex:1}
 </style>
 </head>
 <body>
@@ -202,7 +217,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '2.7 (2026-10-07)';
+const VERSION = '2.9 (2026-11-14)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -248,6 +263,9 @@ const IC = {
   edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   pin:'<path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z"/>',
   search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/>',
+  micoff:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M2 2l20 20"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
@@ -407,6 +425,8 @@ function showLogin(){
     google, h('div',{class:'sep'},'または'), nameF, mail, pass, err, go, sw)));
 }
 async function logout(){
+  if (call) await finishCall(call, 'ended', true);
+  if (gcall) await leaveGroupCall();
   try { await updateDoc(doc(db,'users',me.uid), {online:false}); } catch(e){}
   await signOut(auth);
 }
@@ -445,7 +465,7 @@ function startApp(){
   hb = setInterval(beat, 30000);
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('focus', onVisible);
-  window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); });
+  window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
   document.addEventListener('click', e => { const p = $('#stamps'); if (p && !p.contains(e.target) && !e.target.closest('#stampBtn')) p.classList.remove('show'); });
   autoNotify();
   navigator.serviceWorker?.addEventListener('message', e => {
@@ -485,6 +505,7 @@ function listenRooms(){
     }
     bucket[col] = next; loaded[col] = true;
     rooms = {...bucket.rooms, ...bucket.dms};
+    callWatch();
     if (cur && !rooms[cur] && loaded.rooms && loaded.dms){ toast('このルームは利用できなくなりました'); closeRoom(); }
     if (cur && rooms[cur]){ readMap[cur] = Date.now(); saveRead(); }
     renderRooms(); renderHeader();
@@ -545,10 +566,17 @@ function renderHeader(){
     h('button',{class:'icon-btn back','aria-label':'一覧に戻る',onclick:()=>document.body.classList.remove('in-chat')}, ico('back')),
     avatar(other || r.createdBy || r.id, roomTitle(r), true, other && isOnline(other)),
     h('div',{class:'titles'}, h('div',{class:'t'},roomTitle(r)), h('div',{class:cls},sub)),
+    h('button',{class:'icon-btn','aria-label':isDm(r) ? '電話をかける' : 'グループ通話',onclick:isDm(r) ? startCall : groupCallAction}, ico('phone')),
     h('button',{class:'icon-btn','aria-label':'検索',onclick:searchModal}, ico('search')),
     h('button',{class:'icon-btn','aria-label':'ルームのメニュー',onclick:e=>roomMenu(e.currentTarget)}, ico('more')));
   const pb = $('#pinBar');
-  if (pb) pb.replaceChildren(...(r.pinnedMsg ? [h('div',{class:'pinbar',onclick:()=>jumpTo(r.pinnedMsgId)}, ico('pin',15), h('span',{},r.pinnedMsg))] : []));
+  if (pb){
+    const items = [];
+    if (!isDm(r) && r.callState === 'active' && r.callId && !gcall && Date.now() - ms(r.callTs) < 6 * 3600 * 1000)
+      items.push(h('button',{class:'callbar',onclick:groupCallAction}, ico('phone',18), h('span',{},'グループ通話中です。タップして参加')));
+    if (r.pinnedMsg) items.push(h('div',{class:'pinbar',onclick:()=>jumpTo(r.pinnedMsgId)}, ico('pin',15), h('span',{},r.pinnedMsg)));
+    pb.replaceChildren(...items);
+  }
 }
 function jumpTo(id){
   const el = curEls.get(id); if (!el) return toast('このメッセージは読み込まれていません');
@@ -620,7 +648,7 @@ async function removeRoom(r){
   if (!(await confirmBox(dm ? 'DMを削除' : 'ルームを削除', dm ? 'このDMの履歴がすべて消えます。相手側からも消えます。' : 'ルームとメッセージがすべて消えます。メンバー全員から見えなくなります。', '削除する'))) return;
   if (cur === r.id) closeRoom();
   try {
-    for (const sub of ['messages','images']){
+    for (const sub of ['messages','images','calls']){
       for (;;){
         const sn = await getDocs(query(collection(db, r.col, r.id, sub), limit(100)));
         if (sn.empty) break;
@@ -1023,6 +1051,339 @@ function profileModal(){
   let close;
   close = modal('プロフィール', [h('label',{},'表示名'), name, h('label',{},'アイコンの色'), sw,
     h('button',{class:'btn',onclick:async()=>{ const n = name.value.trim(); if (!n) return; try{ await updateDoc(doc(db,'users',me.uid),{name:n,color}); close(); toast('保存しました'); }catch(e){ toast('保存できませんでした'); } }},'保存する')]);
+}
+
+
+/* ---------- 通話（1対1の音声通話） ---------- */
+const ICE = {iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302']}]};
+let call = null, incoming = null, ringCtx = null, ringTimer = null;
+const handledCalls = new Set();
+const fmtDur = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+
+function startRing(){
+  stopRing();
+  try {
+    ringCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = () => { if (!ringCtx) return; const o = ringCtx.createOscillator(), g = ringCtx.createGain(); o.frequency.value = 480; g.gain.value = 0.08; o.connect(g); g.connect(ringCtx.destination); o.start(); o.stop(ringCtx.currentTime + 0.35); };
+    beep();
+    ringTimer = setInterval(() => { beep(); navigator.vibrate && navigator.vibrate([300,150,300]); }, 1600);
+  } catch(e){}
+}
+function stopRing(){ clearInterval(ringTimer); ringTimer = null; try { ringCtx && ringCtx.close(); } catch(e){} ringCtx = null; }
+
+function newCall(o){
+  const pc = new RTCPeerConnection(ICE);
+  const audio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(audio);
+  const c = {...o, pc, audio, pending:[], unsubs:[], state:'ringing', connectedAt:0, muted:false};
+  o.stream.getTracks().forEach(t => pc.addTrack(t, o.stream));
+  pc.ontrack = e => { audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); };
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
+    if (st === 'connected'){ c.state = 'active'; c.connectedAt = c.connectedAt || Date.now(); clearTimeout(c.ringTimeout); stopRing(); drawCallUI(); }
+    else if (st === 'failed'){ toast('通話がつながりませんでした（回線の都合で、つながらないことがあります）'); finishCall(c, 'ended', true); }
+    else if (st === 'disconnected'){ clearTimeout(c.dropTimer); c.dropTimer = setTimeout(() => { if (call === c && pc.connectionState !== 'connected') finishCall(c, 'ended', true); }, 8000); }
+  };
+  call = c;
+  return c;
+}
+function addCand(c, d){ if (c.pc.remoteDescription) c.pc.addIceCandidate(d).catch(()=>{}); else c.pending.push(d); }
+function flushCands(c){ c.pending.splice(0).forEach(d => c.pc.addIceCandidate(d).catch(()=>{})); }
+const candJson = cand => JSON.parse(JSON.stringify(cand.toJSON()));
+
+async function getMic(){
+  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('この端末・ブラウザは、通話に対応していません'); return null; }
+  try { return await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true}}); }
+  catch(e){ toast('マイクが使えません。ブラウザのマイクの許可を確認してください'); return null; }
+}
+
+async function startCall(){
+  const r = rooms[cur];
+  if (!r || !isDm(r)) return;
+  if (call || incoming || gcall) return toast('ほかの通話中です');
+  const stream = await getMic(); if (!stream) return;
+  const peer = otherUid(r);
+  const callRef = doc(collection(db, r.col, r.id, 'calls'));
+  const c = newCall({role:'caller', r, dmId:r.id, callId:callRef.id, stream, peer});
+  try {
+    c.pc.onicecandidate = e => { if (e.candidate) addDoc(collection(callRef,'callerCandidates'), candJson(e.candidate)).catch(()=>{}); };
+    const offer = await c.pc.createOffer();
+    await c.pc.setLocalDescription(offer);
+    await setDoc(callRef, {offer:{type:offer.type, sdp:offer.sdp}, caller:me.uid, callee:peer, createdAt:serverTimestamp()});
+    await updateDoc(roomRef(r), {callId:callRef.id, callState:'ringing', callFrom:me.uid, callTs:serverTimestamp()});
+  } catch(e){ console.error(e); toast('電話をかけられませんでした（Firestoreのルールを確認してください）'); c.silent = true; finishCall(c, 'ended', false); return; }
+  c.unsubs.push(onSnapshot(callRef, sn => {
+    const d = sn.data();
+    if (d && d.answer && !c.pc.currentRemoteDescription && !c.gotAnswer){
+      c.gotAnswer = true;
+      c.pc.setRemoteDescription(d.answer).then(() => flushCands(c)).catch(()=>{});
+      if (c.state === 'ringing') { c.state = 'connecting'; drawCallUI(); }
+    }
+  }));
+  c.unsubs.push(onSnapshot(collection(callRef,'calleeCandidates'), sn => sn.docChanges().forEach(ch => { if (ch.type === 'added') addCand(c, ch.doc.data()); })));
+  c.ringTimeout = setTimeout(() => { if (call === c && c.state === 'ringing') finishCall(c, 'missed', true); }, 45000);
+  drawCallUI();
+  startRing();
+}
+
+async function answerCall(){
+  const i = incoming; if (!i) return;
+  hideIncoming();
+  if (i.group) return joinGroupCall(i.r, i.callId, false);
+  const stream = await getMic();
+  if (!stream){ updateDoc(doc(db,i.r.col,i.r.id),{callState:'declined'}).catch(()=>{}); return; }
+  const r = i.r;
+  const callRef = doc(db, r.col, r.id, 'calls', i.callId);
+  let d;
+  try { d = (await getDoc(callRef)).data(); } catch(e){}
+  if (!d || !d.offer){ stream.getTracks().forEach(t => t.stop()); return toast('通話が終了していました'); }
+  const c = newCall({role:'callee', r, dmId:r.id, callId:i.callId, stream, peer:r.callFrom});
+  c.state = 'connecting';
+  try {
+    c.pc.onicecandidate = e => { if (e.candidate) addDoc(collection(callRef,'calleeCandidates'), candJson(e.candidate)).catch(()=>{}); };
+    await c.pc.setRemoteDescription(d.offer);
+    const ans = await c.pc.createAnswer();
+    await c.pc.setLocalDescription(ans);
+    await updateDoc(callRef, {answer:{type:ans.type, sdp:ans.sdp}});
+    await updateDoc(roomRef(r), {callState:'active'});
+    c.unsubs.push(onSnapshot(collection(callRef,'callerCandidates'), sn => sn.docChanges().forEach(ch => { if (ch.type === 'added') addCand(c, ch.doc.data()); })));
+    flushCands(c);
+    drawCallUI();
+  } catch(e){ console.error(e); toast('通話を始められませんでした'); finishCall(c, 'ended', true); }
+}
+
+function declineCall(){
+  const i = incoming; hideIncoming();
+  if (i && !i.group) updateDoc(doc(db, i.r.col, i.r.id), {callState:'declined'}).catch(()=>{});
+}
+
+async function finishCall(c, state, writeRemote){
+  if (!c || c.done) return;
+  c.done = true;
+  clearTimeout(c.ringTimeout); clearTimeout(c.dropTimer); clearInterval(c.tick); stopRing();
+  c.unsubs.forEach(f => f());
+  try { c.stream.getTracks().forEach(t => t.stop()); } catch(e){}
+  try { c.pc.close(); } catch(e){}
+  c.audio.remove();
+  if (call === c) call = null;
+  const ui = $('#callUI'); if (ui) ui.remove();
+  const dur = c.connectedAt ? Math.round((Date.now() - c.connectedAt) / 1000) : 0;
+  if (writeRemote) updateDoc(roomRef(c.r), {callState: state}).catch(()=>{});
+  if (c.role === 'caller' && !c.silent){
+    const text = dur ? '通話 ' + fmtDur(dur) : state === 'declined' ? '通話が拒否されました' : state === 'missed' ? '不在着信' : '通話がキャンセルされました';
+    sysMsg(c.r, text).catch(()=>{});
+  }
+}
+
+function drawCallUI(){
+  const c = call; if (!c) return;
+  let ui = $('#callUI');
+  if (!ui){ ui = h('div',{class:'callov',id:'callUI',role:'dialog','aria-label':'通話'}); document.body.append(ui); }
+  const name = nameOf(c.peer);
+  ui.replaceChildren(
+    avatar(c.peer, name, false, false),
+    h('div',{class:'cname'}, name),
+    h('div',{class:'cstat',id:'callStat'}, callStatus(c)),
+    h('div',{class:'cbtns'},
+      h('button',{class:'cbtn'+(c.muted?' on':''),'aria-label':c.muted?'ミュートを解除':'ミュート',onclick:()=>{ c.muted = !c.muted; c.stream.getAudioTracks().forEach(t => t.enabled = !c.muted); drawCallUI(); }}, ico(c.muted ? 'micoff' : 'mic', 28)),
+      h('button',{class:'cbtn red','aria-label':'電話を切る',onclick:()=>finishCall(c, 'ended', true)}, ico('phone', 28))));
+  if (c.state === 'active' && !c.tick) c.tick = setInterval(() => { const s = $('#callStat'); if (s) s.textContent = callStatus(c); }, 1000);
+}
+function callStatus(c){
+  if (c.state === 'active') return '通話中 ' + fmtDur(Math.floor((Date.now() - c.connectedAt) / 1000));
+  return c.role === 'caller' && c.state === 'ringing' ? '呼び出し中…' : '接続中…';
+}
+
+function showIncoming(r, group){
+  incoming = {dmId:r.id, callId:r.callId, r, group:!!group};
+  handledCalls.add(r.callId);
+  startRing();
+  const name = group ? roomTitle(r) : nameOf(r.callFrom);
+  document.body.append(h('div',{class:'callov',id:'incomingUI',role:'alertdialog','aria-label':'着信'},
+    avatar(r.callFrom, name, false, false),
+    h('div',{class:'cname'}, name),
+    h('div',{class:'cstat'}, group ? nameOf(r.callFrom) + 'がグループ通話を始めました' : '着信中…'),
+    h('div',{class:'cbtns'},
+      h('button',{class:'cbtn red','aria-label':group ? '無視' : '拒否',onclick:declineCall}, ico('phone', 28)),
+      h('button',{class:'cbtn green','aria-label':group ? '参加' : '応答',onclick:answerCall}, ico('phone', 28)))));
+  incoming.timeout = setTimeout(hideIncoming, 45000);
+  if (!inFocus() && !document.hidden && 'Notification' in window && Notification.permission === 'granted'){
+    navigator.serviceWorker && navigator.serviceWorker.ready.then(reg => reg.showNotification(group ? 'グループ通話' : '着信', {body: group ? name + 'で通話が始まりました' : name + 'から電話です', icon:'icon-192.png?v=2', tag:'call', requireInteraction:true})).catch(()=>{});
+  }
+}
+function hideIncoming(){
+  if (incoming) clearTimeout(incoming.timeout);
+  incoming = null;
+  if (!call) stopRing();
+  const u = $('#incomingUI'); if (u) u.remove();
+}
+function callWatch(){
+  for (const r of Object.values(rooms)){
+    if (!isDm(r)){
+      if (incoming && incoming.group && incoming.dmId === r.id && r.callState !== 'active') hideIncoming();
+      if (r.callState === 'active' && r.callId && r.callFrom && r.callFrom !== me.uid && !gcall && !call && !incoming && !handledCalls.has(r.callId) && Date.now() - ms(r.callTs) < 50000) showIncoming(r, true);
+      continue;
+    }
+    if (call && call.dmId === r.id && r.callId === call.callId && ['ended','declined','missed'].includes(r.callState)) finishCall(call, r.callState, false);
+    if (incoming && incoming.dmId === r.id && r.callId === incoming.callId && r.callState !== 'ringing') hideIncoming();
+    if (r.callState === 'ringing' && r.callFrom && r.callFrom !== me.uid && !call && !incoming && !handledCalls.has(r.callId) && Date.now() - ms(r.callTs) < 50000) showIncoming(r);
+  }
+}
+
+/* ---------- グループ通話（メッシュ方式・最大6人） ---------- */
+let gcall = null;
+const GMAX = 6;
+
+async function groupCallAction(){
+  const r = rooms[cur]; if (!r) return;
+  if (gcall) return toast('すでに通話中です');
+  if (call || incoming) return toast('ほかの通話中です');
+  const active = r.callState === 'active' && r.callId && Date.now() - ms(r.callTs) < 6 * 3600 * 1000;
+  if (active) return joinGroupCall(r, r.callId, false);
+  return joinGroupCall(r, doc(collection(db, r.col, r.id, 'calls')).id, true);
+}
+const peerRec = (g, uid) => { let p = g.peers.get(uid); if (!p){ p = {pc:null, audio:null, pending:[], state:'connecting'}; g.peers.set(uid, p); } return p; };
+const sendSig = (g, to, type, data) => addDoc(collection(g.callRef, 'signals'), {from:me.uid, to, type, data, ts:serverTimestamp()}).catch(()=>{});
+function closePeer(g, uid){
+  const p = g.peers.get(uid);
+  if (p){ try { p.pc && p.pc.close(); } catch(e){} p.audio && p.audio.remove(); g.peers.delete(uid); }
+}
+function makePc(g, uid){
+  const p = peerRec(g, uid);
+  if (p.pc) return p;
+  const pc = new RTCPeerConnection(ICE); p.pc = pc;
+  p.audio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(p.audio);
+  g.stream.getTracks().forEach(t => pc.addTrack(t, g.stream));
+  pc.ontrack = e => { p.audio.srcObject = e.streams[0]; p.audio.play().catch(()=>{}); };
+  pc.onicecandidate = e => { if (e.candidate) sendSig(g, uid, 'candidate', candJson(e.candidate)); };
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
+    p.state = st === 'connected' ? 'active' : st === 'failed' ? 'failed' : 'connecting';
+    if (st === 'failed') toast(nameOf(uid) + 'さんとつながりませんでした');
+    drawGroupUI();
+  };
+  return p;
+}
+async function offerTo(g, uid){
+  const p = makePc(g, uid);
+  const off = await p.pc.createOffer();
+  await p.pc.setLocalDescription(off);
+  sendSig(g, uid, 'offer', {type:off.type, sdp:off.sdp});
+}
+async function handleSignal(g, sg){
+  const uid = sg.from; if (!uid || uid === me.uid) return;
+  try {
+    if (sg.type === 'offer'){
+      const old = g.peers.get(uid);
+      if (old && old.pc && old.pc.remoteDescription){ const keep = old.pending; closePeer(g, uid); peerRec(g, uid).pending = keep; }
+      const p = makePc(g, uid);
+      await p.pc.setRemoteDescription(sg.data);
+      const ans = await p.pc.createAnswer();
+      await p.pc.setLocalDescription(ans);
+      sendSig(g, uid, 'answer', {type:ans.type, sdp:ans.sdp});
+      p.pending.splice(0).forEach(c => p.pc.addIceCandidate(c).catch(()=>{}));
+    } else if (sg.type === 'answer'){
+      const p = g.peers.get(uid);
+      if (p && p.pc && !p.pc.currentRemoteDescription){
+        await p.pc.setRemoteDescription(sg.data);
+        p.pending.splice(0).forEach(c => p.pc.addIceCandidate(c).catch(()=>{}));
+      }
+    } else if (sg.type === 'candidate'){
+      const p = peerRec(g, uid);
+      if (p.pc && p.pc.remoteDescription) p.pc.addIceCandidate(sg.data).catch(()=>{}); else p.pending.push(sg.data);
+    }
+  } catch(e){ console.warn('signal', e); }
+}
+
+async function joinGroupCall(r, callId, isStart){
+  if (gcall) return;
+  const stream = await getMic(); if (!stream) return;
+  const callRef = doc(db, r.col, r.id, 'calls', callId);
+  let live = [];
+  try {
+    const pd = await getDocs(collection(callRef, 'peers'));
+    live = pd.docs.filter(d => d.id !== me.uid && Date.now() - ms(d.data({serverTimestamps:'estimate'}).ts) < 90000);
+  } catch(e){ stream.getTracks().forEach(t => t.stop()); console.error(e); return toast('通話に参加できませんでした（Firestoreのルールを確認してください）'); }
+  if (live.length >= GMAX - 1){ stream.getTracks().forEach(t => t.stop()); return toast('グループ通話は、' + GMAX + '人までです'); }
+  const g = gcall = {r, callId, callRef, stream, peers:new Map(), present:new Set(), names:{}, ptime:{}, unsubs:[], muted:false, startedAt:Date.now()};
+  try {
+    const old = await getDocs(query(collection(callRef, 'signals'), where('to', '==', me.uid)));
+    await Promise.all(old.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
+    await setDoc(doc(callRef, 'peers', me.uid), {uid:me.uid, name:myName(), ts:serverTimestamp()});
+    if (isStart || !(r.callState === 'active' && r.callId === callId)){
+      await setDoc(callRef, {startedBy:me.uid, createdAt:serverTimestamp()}, {merge:true});
+      await updateDoc(roomRef(r), {callId, callState:'active', callFrom:me.uid, callTs:serverTimestamp()});
+      handledCalls.add(callId);
+      sysMsg(r, myName() + 'がグループ通話を始めました').catch(()=>{});
+    }
+  } catch(e){
+    console.error(e); toast('通話に参加できませんでした（Firestoreのルールを確認してください）');
+    stream.getTracks().forEach(t => t.stop()); gcall = null; return;
+  }
+  g.unsubs.push(onSnapshot(collection(callRef, 'peers'), sn => {
+    sn.docChanges().forEach(ch => {
+      const uid = ch.doc.id; if (uid === me.uid) return;
+      const d = ch.doc.data({serverTimestamps:'estimate'});
+      if (ch.type === 'removed'){ g.present.delete(uid); closePeer(g, uid); return; }
+      g.ptime[uid] = ms(d.ts) || Date.now();
+      if (Date.now() - g.ptime[uid] > 90000) return;
+      g.names[uid] = d.name;
+      if (!g.present.has(uid)){
+        g.present.add(uid);
+        if (me.uid > uid) offerTo(g, uid).catch(e => console.warn('offer', e)); // 双方が同時に発信しないよう、IDの大きいほうが発信する
+      }
+    });
+    drawGroupUI();
+  }));
+  g.unsubs.push(onSnapshot(query(collection(callRef, 'signals'), where('to', '==', me.uid)), sn => {
+    sn.docChanges().forEach(ch => { if (ch.type === 'added'){ handleSignal(g, ch.doc.data()); deleteDoc(ch.doc.ref).catch(()=>{}); } });
+  }));
+  g.beat = setInterval(() => {
+    updateDoc(doc(callRef, 'peers', me.uid), {ts:serverTimestamp()}).catch(()=>{});
+    for (const uid of [...g.present]) if (Date.now() - (g.ptime[uid] || 0) > 90000){ g.present.delete(uid); closePeer(g, uid); }
+    drawGroupUI();
+  }, 20000);
+  g.clock = setInterval(() => { const s = $('#gStat'); if (s) s.textContent = gStatus(g); }, 1000);
+  drawGroupUI();
+}
+
+const gStatus = g => '通話中 ' + fmtDur(Math.floor((Date.now() - g.startedAt) / 1000)) + '・' + (g.present.size + 1) + '人';
+function drawGroupUI(){
+  const g = gcall; if (!g) return;
+  let ui = $('#gcallUI');
+  if (!ui){ ui = h('div',{class:'callov',id:'gcallUI',role:'dialog','aria-label':'グループ通話'}); document.body.append(ui); }
+  const who = (uid, label, st) => h('div',{class:'gp'}, avatar(uid, label, false, false), h('div',{}, label), h('small',{}, st));
+  const list = [who(me.uid, myName(), '自分' + (g.muted ? '（ミュート中）' : ''))];
+  g.present.forEach(uid => {
+    const p = g.peers.get(uid);
+    list.push(who(uid, g.names[uid] || nameOf(uid), !p || !p.pc ? '待っています…' : p.state === 'active' ? '通話中' : p.state === 'failed' ? '接続できません' : '接続中…'));
+  });
+  ui.replaceChildren(
+    h('div',{class:'cname'}, roomTitle(g.r)),
+    h('div',{class:'cstat',id:'gStat'}, gStatus(g)),
+    h('div',{class:'gl'}, list),
+    h('div',{class:'cbtns'},
+      h('button',{class:'cbtn'+(g.muted?' on':''),'aria-label':g.muted?'ミュートを解除':'ミュート',onclick:()=>{ g.muted = !g.muted; g.stream.getAudioTracks().forEach(t => t.enabled = !g.muted); drawGroupUI(); }}, ico(g.muted ? 'micoff' : 'mic', 28)),
+      h('button',{class:'cbtn red','aria-label':'通話から抜ける',onclick:leaveGroupCall}, ico('phone', 28))));
+}
+async function leaveGroupCall(){
+  const g = gcall; if (!g || g.left) return;
+  g.left = true; gcall = null;
+  clearInterval(g.beat); clearInterval(g.clock);
+  g.unsubs.forEach(f => f());
+  [...g.peers.keys()].forEach(uid => closePeer(g, uid));
+  g.stream.getTracks().forEach(t => t.stop());
+  const ui = $('#gcallUI'); if (ui) ui.remove();
+  renderHeader();
+  try { await deleteDoc(doc(g.callRef, 'peers', me.uid)); } catch(e){}
+  try {
+    const left = await getDocs(collection(g.callRef, 'peers'));
+    const others = left.docs.filter(d => Date.now() - ms(d.data({serverTimestamps:'estimate'}).ts) < 90000);
+    if (!others.length){
+      await updateDoc(roomRef(g.r), {callState:'ended'});
+      const start = ms(rooms[g.r.id] && rooms[g.r.id].callTs) || g.startedAt;
+      sysMsg(g.r, 'グループ通話が終了しました（' + fmtDur(Math.max(0, Math.round((Date.now() - start) / 1000))) + '）').catch(()=>{});
+    }
+  } catch(e){}
 }
 
 /* ---------- notifications ---------- */
