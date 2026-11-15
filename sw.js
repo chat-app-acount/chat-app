@@ -19,14 +19,15 @@ messaging.onBackgroundMessage(payload => {
     icon: '/chat-app/icon-192.png',
     badge: '/chat-app/icon-192.png',
     data: { url: '/chat-app/' + (data.roomId ? '?room=' + data.roomId : '') },
-    vibrate: [200, 100, 200],
-    tag: data.roomId || 'chatspace',
+    vibrate: data.call === '1' ? [300, 150, 300, 150, 300] : [200, 100, 200],
+    requireInteraction: data.call === '1',
+    tag: data.tag || data.roomId || 'chatspace',
     renotify: true
   });
 });
 
 // v4: 古いキャッシュを必ず消し、ページは常にネットワーク優先で取得する
-const CACHE = 'chatspace-v4';
+const CACHE = 'chatspace-v5';
 const SHELL = ['/chat-app/', '/chat-app/index.html', '/chat-app/manifest.json', '/chat-app/icon-192.png', '/chat-app/icon-512.png'];
 
 self.addEventListener('install', e => {
