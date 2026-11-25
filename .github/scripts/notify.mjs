@@ -81,7 +81,7 @@ async function poll() {
         method: 'POST', headers: H,
         body: JSON.stringify({ structuredQuery: {
           from: [{ collectionId: 'messages' }],
-          select: { fields: ['type','author','text','stamp','deleted','readBy','hasImage'].map(f => ({ fieldPath: f })) },
+          select: { fields: ['type','author','text','stamp','deleted','readBy','hasImage','hasPoll','mentions'].map(f => ({ fieldPath: f })) },
           where: { fieldFilter: { field: { fieldPath: 'ts' }, op: 'GREATER_THAN', value: { timestampValue: last } } },
           orderBy: [{ field: { fieldPath: 'ts' }, direction: 'ASCENDING' }],
           limit: 50
@@ -92,10 +92,11 @@ async function poll() {
         const m = r2.document && r2.document.fields; if (!m) continue;
         if (str(m.type) === 'system' || (m.deleted && m.deleted.booleanValue)) continue;
         const author = str(m.author), readBy = strs(m.readBy);
-        const text = m.hasImage && m.hasImage.booleanValue ? '画像を送信しました' : (m.stamp && m.stamp.booleanValue ? 'スタンプ ' : '') + str(m.text);
+        const mentions = strs(m.mentions);
+        const text = m.hasPoll && m.hasPoll.booleanValue ? '投票: ' + str(m.text) : m.hasImage && m.hasImage.booleanValue ? '画像を送信しました' : (m.stamp && m.stamp.booleanValue ? 'スタンプ ' : '') + str(m.text);
         for (const u of members) {
           if (u === author || readBy.includes(u)) continue;
-          (todo[u] = todo[u] || []).push({ col, roomId, roomName: str(f.name), author, text });
+          (todo[u] = todo[u] || []).push({ col, roomId, roomName: str(f.name), author, text, mentions });
         }
       }
     }
@@ -110,10 +111,11 @@ async function poll() {
     items.forEach(i => (byRoom[i.col + '/' + i.roomId] = byRoom[i.col + '/' + i.roomId] || []).push(i));
     for (const list of Object.values(byRoom)) {
       const li = list[list.length - 1];
+      const mentioned = list.some(i => i.mentions.includes(uid));
       const senderName = str((await getUser(li.author)).name) || 'ChatSpace';
       const title = li.col === 'dms' ? senderName : (li.roomName || 'ChatSpace');
       const prefix = list.length > 1 ? `${list.length}件の新着 ` : '';
-      const body = (li.col === 'rooms' ? senderName + ': ' : '') + prefix + li.text.slice(0, 100);
+      const body = (mentioned ? 'あなた宛: ' : '') + (li.col === 'rooms' ? senderName + ': ' : '') + prefix + li.text.slice(0, 100);
       for (const token of tokens) {
         const r = await fetch(`https://fcm.googleapis.com/v1/projects/${PROJECT}/messages:send`, {
           method: 'POST', headers: H,
@@ -161,6 +163,37 @@ async function poll() {
       }
     }
   } catch (e) { console.log('call push error', e.message); }
+
+  // 招待のお知らせ（ルームに招待されたとき）
+  try {
+    const iq = await fetch(`${FS}:runQuery`, {
+      method: 'POST', headers: H,
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: 'rooms' }],
+        where: { fieldFilter: { field: { fieldPath: 'inviteTs' }, op: 'GREATER_THAN_OR_EQUAL', value: { timestampValue: since } } },
+        limit: 50
+      } })
+    });
+    if (iq.ok) for (const row of await iq.json()) {
+      const d = row.document; if (!d) continue;
+      const f = d.fields || {}, roomId = d.name.split('/').pop();
+      const ts = f.inviteTs && f.inviteTs.timestampValue;
+      if (!ts || Date.parse(ts) <= Date.parse(last)) continue;
+      const by = str(f.invitedBy);
+      const inviterName = str((await getUser(by)).name) || 'ChatSpace';
+      const body = inviterName + 'さんが「' + (str(f.name) || 'ルーム') + '」に招待しました';
+      for (const u of strs(f.invited).filter(x => x !== by)) {
+        for (const token of strs((await getUser(u)).fcmTokens)) {
+          const r = await fetch(`https://fcm.googleapis.com/v1/projects/${PROJECT}/messages:send`, {
+            method: 'POST', headers: H,
+            body: JSON.stringify({ message: { token, data: { title: 'ルームに招待されました', body, roomId, tag: 'invite' },
+              webpush: { headers: { Urgency: 'high' }, fcm_options: { link: SITE + '?room=' + roomId } } } })
+          });
+          if (r.ok) sent++; else if (r.status === 404) (dead[u] = dead[u] || new Set()).add(token);
+        }
+      }
+    }
+  } catch (e) { console.log('invite push error', e.message); }
 
   const writes = Object.entries(dead).map(([u, set]) => ({ transform: {
     document: `projects/${PROJECT}/databases/(default)/documents/users/${u}`,
