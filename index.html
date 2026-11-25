@@ -244,7 +244,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '3.5 (2026-11-25)';
+const VERSION = '3.6 (2026-11-25)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -295,7 +295,7 @@ const IC = {
   micoff:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M2 2l20 20"/>',
   screen:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
   poll:'<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V7M17 16v-3"/>',
-  belloff:'<path d="M13.7 21a2 2 0 0 1-3.4 0M18 8a6 6 0 0 0-9.3-5M6 6c0 7-3 9-3 9h13M2 2l20 20"/>',
+  game:'<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5M16 11h.01M18 14h.01"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',belloff:'<path d="M13.7 21a2 2 0 0 1-3.4 0M18 8a6 6 0 0 0-9.3-5M6 6c0 7-3 9-3 9h13M2 2l20 20"/>',
   video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/>',
   videooff:'<path d="M16 16v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L22 8v8M2 2l20 20"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
@@ -379,7 +379,7 @@ const nameOf = uid => users[uid]?.name || '不明';
 const ADMIN_EMAIL = 'yui.rugby.1128@gmail.com';
 const isSiteAdmin = () => (me?.email || '').toLowerCase() === ADMIN_EMAIL;
 const POST_MSG = 'このルームに書き込めるのは管理者だけです';
-const isOnline = uid => users[uid]?.online && Date.now() - ms(users[uid]?.lastSeen) < 90000;
+const isOnline = uid => users[uid]?.online && Date.now() - ms(users[uid]?.lastSeen) < 150000;
 const otherUid = r => (r.members||[]).find(u => u !== me.uid);
 const roomTitle = r => isDm(r) ? nameOf(otherUid(r)) : (r.name || 'ルーム');
 const roomRef = r => doc(db, r.col, r.id);
@@ -416,7 +416,6 @@ onAuthStateChanged(auth, async u => {
   me = u;
   await ensureProfile(u);
   try { const sn = await getDoc(doc(db,'users',u.uid)); if (sn.data()?.banned){ alert('このアカウントは管理者により利用停止されています'); await auth.signOut(); return; } } catch(e){}
-  ensureAllRoom().catch(e => console.error('all', e));
   startApp();
 });
 async function ensureProfile(u){
@@ -504,7 +503,8 @@ function startApp(){
   drawFilters();
   listenUsers(); listenRooms();
   const beat = () => { if (me && !document.hidden) updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); };
-  hb = setInterval(beat, 30000);
+  hb = setInterval(beat, 120000);
+  clearInterval(schedT); schedT = setInterval(runSched, 15000); setTimeout(runSched, 3000);
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('focus', onVisible);
   window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
@@ -558,14 +558,6 @@ function listenRooms(){
 }
 
 /* ---------- site admin ---------- */
-async function ensureAllRoom(){
-  const ref = doc(db,'rooms','all'), sn = await getDoc(ref);
-  if (!sn.exists()){
-    if (!isSiteAdmin()) return;
-    await setDoc(ref, {id:'all', name:'ChatSpace 全体', desc:'登録者全員が入るお知らせのルームです', members:[me.uid], createdBy:me.uid, postAdminOnly:true, createdAt:serverTimestamp(), lastMsg:'', lastMsgTs:serverTimestamp()});
-    await addDoc(collection(db,'rooms','all','messages'), {type:'system', text:'全体ルームを作成しました', ts:serverTimestamp(), readBy:[], reactions:{}});
-  } else if (!(sn.data().members||[]).includes(me.uid)) await updateDoc(ref, {members: arrayUnion(me.uid)});
-}
 async function reportMsg(r, id, m){
   if (!(await confirmBox('メッセージを通報', '管理者にこのメッセージを知らせます。', '通報する'))) return;
   try {
@@ -596,7 +588,7 @@ function adminPanel(){
         const sn = await getDocs(collection(db,'rooms'));
         sn.docs.forEach(d => { const x = d.data(); rows.push(row(
           h('div',{}, h('b',{}, x.name || 'ルーム'), small('ID ' + d.id + '｜' + (x.members||[]).length + '人｜作成 ' + nameOf(x.createdBy))),
-          d.id === 'all' ? null : sb('削除', 'danger', async () => { await removeRoom({id:d.id, col:'rooms', ...x}); draw(); }))); });
+          sb('削除', 'danger', async () => { await removeRoom({id:d.id, col:'rooms', ...x}); draw(); }))); });
       } else if (tab === 'reports'){
         const sn = await getDocs(collection(db,'reports'));
         sn.docs.sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).forEach(d => { const x = d.data(); rows.push(row(
@@ -613,6 +605,109 @@ function adminPanel(){
     } catch(e){ console.error(e); list.replaceChildren(h('div',{class:'empty'},'読み込めませんでした（ルールを確認してください）')); }
   };
   modal('管理パネル', [tabs, list]); draw();
+}
+
+/* ---------- v3.6: forward / schedule / mini games ---------- */
+let schedT;
+async function sendTo(r, data, preview){
+  await addDoc(msgCol(r), {author:me.uid, ts:serverTimestamp(), readBy:[me.uid], reactions:{}, ...data});
+  updateDoc(roomRef(r), {lastMsg:String(preview).slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, lastMentions:[]}).catch(()=>{});
+}
+function forwardMsg(m){
+  const picks = new Set(), text = '↪ 転送（' + nameOf(m.author) + '）\n' + m.text;
+  const box = h('div',{style:'display:grid;gap:4px;max-height:50vh;overflow:auto'}, Object.values(rooms).map(t => h('label',{style:'display:flex;gap:8px;align-items:center;padding:6px 2px'}, h('input',{type:'checkbox',onchange:e=>{ e.target.checked ? picks.add(t.id) : picks.delete(t.id); }}), roomTitle(t))));
+  const close = modal('転送', [box, h('button',{class:'btn',onclick:async()=>{
+    if (!picks.size) return toast('送り先を選んでください');
+    close();
+    try { for (const id of picks) await sendTo(rooms[id], {text}, '↪ ' + m.text); toast('転送しました'); } catch(e){ console.error(e); toast('転送できませんでした'); }
+  }}, '転送する')]);
+}
+const getSched = () => { try { return JSON.parse(localStorage.getItem('cs_sched') || '[]'); } catch(e){ return []; } };
+const putSched = a => localStorage.setItem('cs_sched', JSON.stringify(a));
+async function runSched(){
+  if (!me) return;
+  const now = Date.now(), due = getSched().filter(x => x.uid === me.uid && x.at <= now && rooms[x.rid]);
+  if (!due.length) return;
+  putSched(getSched().filter(x => !due.some(d => d.id === x.id)));
+  for (const x of due){ try { await sendTo(rooms[x.rid], {text:x.text}, x.text); } catch(e){ toast('時間指定のメッセージを送れませんでした'); } }
+}
+function scheduleModal(){
+  const r = rooms[cur]; if (!r) return;
+  const ta = h('textarea',{class:'field',rows:'3',placeholder:'送るメッセージ'});
+  const dt = h('input',{class:'field',type:'datetime-local'});
+  const d0 = new Date(Date.now() + 3600e3); d0.setMinutes(d0.getMinutes() - d0.getTimezoneOffset()); dt.value = d0.toISOString().slice(0,16);
+  const list = h('div',{style:'display:grid;gap:6px;margin-top:10px'});
+  const fmt = t => new Date(t).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const draw = () => list.replaceChildren(...getSched().filter(x => x.uid === me.uid).sort((a,b) => a.at - b.at).map(x => h('div',{style:'display:flex;gap:8px;justify-content:space-between;align-items:center;font-size:13px'},
+    h('span',{}, fmt(x.at) + ' → ' + (rooms[x.rid] ? roomTitle(rooms[x.rid]) : '（不明）') + '：' + x.text.slice(0,20)),
+    h('button',{class:'btn ghost',style:'padding:3px 10px;font-size:12px',onclick:()=>{ putSched(getSched().filter(y => y.id !== x.id)); draw(); }}, '取り消し'))));
+  const go = h('button',{class:'btn',onclick:()=>{
+    const text = ta.value.trim(), at = new Date(dt.value).getTime();
+    if (!text) return toast('メッセージを入力してください');
+    if (isNaN(at) || at <= Date.now()) return toast('未来の日時を選んでください');
+    putSched([...getSched(), {id:Date.now() + '-' + Math.random().toString(36).slice(2,6), uid:me.uid, rid:r.id, text, at}]);
+    ta.value = ''; toast('予約しました'); draw();
+  }}, '予約する');
+  modal('時間指定メッセージ（' + roomTitle(r) + '）', [ta, dt, h('div',{style:'margin-top:8px'}, go), h('p',{style:'font-size:12px;opacity:.7'},'予約は、この端末のアプリを開いている間に送られます。閉じている間に時間が過ぎたら、次に開いたときに送られます。'), list]);
+  draw();
+}
+const HANDS = {g:'✊', c:'✌️', p:'✋'}, BEATS = {g:'c', c:'p', p:'g'};
+const GAMES = {rps:'じゃんけん', dice:'サイコロ', ttt:'○×ゲーム', gomoku:'五目並べ'};
+function newGame(kind){
+  if (kind === 'dice') return {kind, v:1 + Math.floor(Math.random()*6)};
+  if (kind === 'rps') return {kind, picks:{}, open:false};
+  const n = kind === 'ttt' ? 3 : 13;
+  return {kind, n, k:kind === 'ttt' ? 3 : 5, b:'.'.repeat(n*n), x:null, o:null, turn:'x', win:null};
+}
+async function createGame(kind){
+  const r = rooms[cur]; if (!r) return;
+  try { await sendTo(r, {text:'🎮 ' + GAMES[kind], game:newGame(kind)}, '🎮 ' + GAMES[kind]); } catch(e){ console.error(e); toast('ゲームを作れませんでした'); }
+}
+function gameModal(){
+  const close = modal('ミニゲーム', [h('div',{style:'display:grid;gap:8px'}, Object.entries(GAMES).map(([k,l]) => h('button',{class:'btn ghost',onclick:()=>{ close(); createGame(k); }}, l)))]);
+}
+function fiveWin(b, n, k, i){
+  const c = b[i], x = i % n, y = Math.floor(i / n);
+  for (const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]){
+    let cnt = 1;
+    for (const s of [1,-1]) for (let t = 1;; t++){ const px = x + dx*t*s, py = y + dy*t*s; if (px < 0 || py < 0 || px >= n || py >= n || b[py*n+px] !== c) break; cnt++; }
+    if (cnt >= k) return true;
+  }
+  return false;
+}
+function gameView(id, m){
+  const r = rooms[cur], g = m.game; if (!r || !g) return h('span',{},'ゲーム');
+  const ref = doc(msgCol(r), id);
+  const save = patch => updateDoc(ref, {game:{...g, ...patch}}).catch(() => toast('操作できませんでした'));
+  const btn = (label, fn, cls) => h('button',{class:'btn '+(cls ?? 'ghost'),style:'padding:5px 12px;font-size:13px',onclick:ev=>{ ev.stopPropagation(); fn(); }}, label);
+  const box = h('div',{style:'display:grid;gap:8px;min-width:200px'}, h('b',{}, '🎮 ' + GAMES[g.kind]));
+  if (g.kind === 'dice'){
+    box.append(h('div',{style:'font-size:44px;text-align:center'}, '⚀⚁⚂⚃⚄⚅'[g.v-1] + ' ' + g.v), btn('ふる', () => save({v:1 + Math.floor(Math.random()*6)})));
+  } else if (g.kind === 'rps'){
+    const picks = g.picks || {}, n = Object.keys(picks).length;
+    if (!g.open){
+      box.append(h('div',{style:'display:flex;gap:8px;justify-content:center'}, Object.entries(HANDS).map(([k,e]) => h('button',{class:'btn '+(picks[me.uid] === k ? '' : 'ghost'),style:'font-size:24px;padding:6px 14px',onclick:ev=>{ ev.stopPropagation(); save({picks:{...picks, [me.uid]:k}}); }}, e))), h('div',{style:'font-size:13px;text-align:center'}, n + '人が選びました'));
+      if (m.author === me.uid && n >= 2) box.append(btn('オープン', () => save({open:true}), ''));
+    } else {
+      const set = new Set(Object.values(picks)), win = set.size === 2 ? [...set].find(k => set.has(BEATS[k])) : null;
+      box.append(...Object.entries(picks).map(([u,k]) => h('div',{}, nameOf(u) + '：' + HANDS[k] + (win === k ? ' 🏆' : ''))), h('b',{}, win ? '勝ち：' + Object.entries(picks).filter(([,k]) => k === win).map(([u]) => nameOf(u)).join('、') : 'あいこ'));
+    }
+  } else {
+    const ttt = g.kind === 'ttt', cs = ttt ? 56 : 24, mark = {x:ttt ? '✕' : '●', o:'○'};
+    const seat = s => g[s] ? nameOf(g[s]) : '（待ち）';
+    const play = i => {
+      if (g.win || g.b[i] !== '.') return;
+      const s = g.turn, other = s === 'x' ? 'o' : 'x';
+      if ((g[s] && g[s] !== me.uid) || (!g[s] && g[other] === me.uid)) return toast('相手の番です');
+      const b = g.b.slice(0,i) + s + g.b.slice(i+1);
+      save({b, [s]:me.uid, turn:other, win:fiveWin(b, g.n, g.k, i) ? s : (b.includes('.') ? null : 'draw')});
+    };
+    const grid = h('div',{style:'display:grid;grid-template-columns:repeat('+g.n+','+cs+'px);gap:2px'});
+    for (let i = 0; i < g.n*g.n; i++) grid.append(h('button',{style:'width:'+cs+'px;height:'+cs+'px;border-radius:6px;background:var(--hover);font-size:'+Math.round(cs*0.6)+'px;line-height:1','aria-label':'マス',onclick:ev=>{ ev.stopPropagation(); play(i); }}, g.b[i] === '.' ? '' : mark[g.b[i]]));
+    box.append(h('div',{style:'font-size:13px'}, mark.x + ' ' + seat('x') + '　' + mark.o + ' ' + seat('o')), h('div',{style:'overflow:auto'}, grid),
+      g.win ? h('b',{}, g.win === 'draw' ? '引き分け' : nameOf(g[g.win]) + ' の勝ち！') : h('div',{style:'font-size:13px'}, mark[g.turn] + ' の番'));
+  }
+  return box;
 }
 
 /* ---------- room list ---------- */
@@ -693,10 +788,10 @@ function roomMenu(anchor){
     items.push({icon:'link',label:'共有リンクをコピー',run:()=>copy(location.origin+location.pathname+'?room='+r.id,'共有リンクをコピーしました')});
     items.push({icon:'copy',label:'ルームIDをコピー（'+r.id+'）',run:()=>copy(r.id,'ルームIDをコピーしました')});
     items.push({icon:'users',label:'メンバーを見る',run:()=>membersModal(r)});
-    if (r.createdBy !== me.uid && r.id !== 'all') items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
+    if (r.createdBy !== me.uid) items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
     if (isAdmin(r)) items.push({icon:'users',label:'メンバーを招待',run:()=>inviteModal(r)});
     if (isAdmin(r)) items.push({icon:'image',label:r.imageAdminOnly ? '画像送信を全員に許可する' : '画像送信を管理者だけにする',run:()=>updateDoc(roomRef(r),{imageAdminOnly:!r.imageAdminOnly}).then(()=>toast(r.imageAdminOnly ? '画像送信を全員に許可しました' : '画像送信を管理者だけにしました')).catch(()=>toast('変更できませんでした'))});
-    if (isAdmin(r) && r.id !== 'all') items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
+    if (isAdmin(r)) items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
   } else items.push({icon:'trash',label:'このDMを削除',danger:true,run:()=>removeRoom(r)});
   popup(anchor, items);
 }
@@ -840,7 +935,7 @@ function msgEl(id, m){
   const isPoll = !m.deleted && m.poll && Array.isArray(m.poll.options);
   const toMe = !m.deleted && (m.mentions || []).includes(me.uid);
   el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(pic?' imgb':'')+(m.deleted?' deleted':'')+(toMe?' mentioned':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
-    m.deleted ? 'メッセージは削除されました' : isPoll ? pollView(id, m) : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像（タップで拡大）',loading:'lazy',onclick:ev=>{ ev.stopPropagation(); openImage(r, id, m); }}) : stamp ? m.text : withMentions(linkify(m.text || ''), r)));
+    m.deleted ? 'メッセージは削除されました' : isPoll ? pollView(id, m) : (!m.deleted && m.game) ? gameView(id, m) : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像（タップで拡大）',loading:'lazy',onclick:ev=>{ ev.stopPropagation(); openImage(r, id, m); }}) : stamp ? m.text : withMentions(linkify(m.text || ''), r)));
   if (!m.deleted){
     const rc = h('div',{class:'reacts'});
     Object.entries(m.reactions || {}).forEach(([e, list]) => {
@@ -853,8 +948,9 @@ function msgEl(id, m){
       h('span',{class:'sp'}),
       act('reply','返信',()=>setReply(id, m.hasImage ? '画像' : m.text)),
       pic ? act('search','拡大',()=>openImage(r, id, m)) : null,
-      mine && !m.stamp && !m.hasImage && !isPoll ? act('edit','編集',()=>editMsg(id,m)) : null,
+      mine && !m.stamp && !m.hasImage && !isPoll && !m.game ? act('edit','編集',()=>editMsg(id,m)) : null,
       r && !isDm(r) ? act('pin', r.pinnedMsgId===id ? 'ピン解除' : 'ピン留め',()=>togglePin(id,m)) : null,
+      !m.deleted && !m.hasImage && !isPoll && !m.game && m.text ? act('send','転送',()=>forwardMsg(m)) : null,
       !mine && r ? act('x','通報',()=>reportMsg(r,id,m)) : null,
       mine ? act('trash','削除',()=>deleteMsg(id),'del') : null);
     el.append(bar);
@@ -982,6 +1078,8 @@ function composer(){
     sug.hidden = false;
   };
   const pollBtn = h('button',{class:'icon-btn','aria-label':'投票を作る',onclick:pollModal}, ico('poll',24));
+  const gameBtn = h('button',{class:'icon-btn','aria-label':'ミニゲーム',onclick:gameModal}, ico('game',24));
+  const schedBtn = h('button',{class:'icon-btn','aria-label':'時間指定メッセージ',onclick:scheduleModal}, ico('clock',24));
   const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,140) + 'px'; sendBtn.disabled = !ta.value.trim(); };
   const submit = () => { const t = ta.value; if (!t.trim()) return; ta.value = ''; fit(); doSend('text', t); if (!isMobile) ta.focus(); };
   ta.addEventListener('input', () => { fit(); sendTyping(); updateSug(); });
@@ -993,7 +1091,7 @@ function composer(){
   sendBtn.addEventListener('click', submit);
   const rb = h('div',{class:'replybar',id:'replyBar',hidden:true});
   const isGroupRoom = rooms[cur] && !isDm(rooms[cur]);
-  return h('div',{class:'composer'}, panel, sug, rb, h('div',{class:'crow'}, stampBtn, imgBtn, isGroupRoom ? pollBtn : null, fileIn, ta, sendBtn));
+  return h('div',{class:'composer'}, panel, sug, rb, h('div',{class:'crow'}, stampBtn, imgBtn, isGroupRoom ? pollBtn : null, gameBtn, schedBtn, fileIn, ta, sendBtn));
 }
 async function doSend(kind, text){
   text = String(text).trim(); const r = rooms[cur]; if (!text || !r) return;
