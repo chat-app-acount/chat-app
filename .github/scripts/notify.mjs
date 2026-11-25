@@ -9,7 +9,7 @@ const FS = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(d
 const sa = JSON.parse(process.env.SERVICE_ACCOUNT);
 
 const RUN_SECONDS = 290;   // 1回の実行の長さ
-const INTERVAL_MS = 7000; // 確認の間隔（5秒より短くしないでください：Firestoreの無料枠を超えます）
+const INTERVAL_MS = 10000; // 確認の間隔（5秒より短くしないでください：Firestoreの無料枠を超えます）
 
 const b64u = b => Buffer.from(b).toString('base64url');
 const str = f => (f && f.stringValue) || '';
