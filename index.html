@@ -209,6 +209,31 @@ input,textarea{font:inherit;color:inherit}
 .callbar span{flex:1}
 .callov .rv{width:min(94vw,980px);max-height:62vh;border-radius:12px;background:#000;cursor:zoom-in;object-fit:contain}
 .callov .gvid{display:flex;flex-direction:column;align-items:center;gap:6px}
+.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.mention{color:var(--accent);font-weight:700;background:var(--hover);border-radius:4px;padding:0 3px}
+.msg.mine .mention{color:#fff;background:rgba(255,255,255,.22)}
+.bubble.mentioned{box-shadow:0 0 0 2px var(--accent)}
+.sug{position:absolute;left:8px;right:8px;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);max-width:360px;padding:4px;z-index:5}
+.sug button{display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border-radius:10px;text-align:left}
+.sug button:hover,.sug button.first{background:var(--hover)}
+.poll{display:grid;gap:6px;min-width:min(240px,70vw)}
+.poll .pq{font-weight:700;margin-bottom:2px}
+.popt{position:relative;display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-align:left;overflow:hidden}
+.popt .pbar{position:absolute;left:0;top:0;bottom:0;background:var(--hover);z-index:0;transition:width .25s}
+.popt.on{border-color:var(--accent)}
+.popt.on .pbar{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+.popt .ptxt{position:relative;z-index:1;flex:1;word-break:break-word}
+.popt .pcnt{position:relative;z-index:1;font-size:12px;color:var(--sub)}
+.popt:disabled{opacity:.75;cursor:default}
+.poll .pfoot{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--sub)}
+.msg.mine .bubble .poll .pq{color:var(--mine-ink)}
+.msg.mine .bubble .pfoot{color:rgba(255,255,255,.75)}
+.pimg{display:flex;align-items:center;gap:14px}
+.pimg .avatar{width:72px;height:72px;font-size:30px}
+.callov .pv{width:128px;aspect-ratio:4/3;border-radius:10px;background:#000;object-fit:cover;cursor:zoom-in}
+.pips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.callov .gpv{width:152px;aspect-ratio:4/3;border-radius:10px;background:#000;object-fit:cover;cursor:zoom-in}
+.gl .gp.cam{width:156px}
 </style>
 </head>
 <body>
@@ -219,7 +244,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '3.1 (2026-11-14)';
+const VERSION = '3.4 (2026-11-16)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -269,6 +294,10 @@ const IC = {
   mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/>',
   micoff:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M2 2l20 20"/>',
   screen:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  poll:'<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V7M17 16v-3"/>',
+  belloff:'<path d="M13.7 21a2 2 0 0 1-3.4 0M18 8a6 6 0 0 0-9.3-5M6 6c0 7-3 9-3 9h13M2 2l20 20"/>',
+  video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/>',
+  videooff:'<path d="M16 16v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L22 8v8M2 2l20 20"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
@@ -285,7 +314,8 @@ const fmtList = t => {
 const COLORS = ['#7c6af7','#f472b6','#34d399','#fb923c','#60a5fa','#a78bfa','#f59e0b','#10b981','#ef4444','#06b6d4'];
 const colorOf = uid => users[uid]?.color || COLORS[[...String(uid)].reduce((a,c)=>(a*31+c.charCodeAt(0))%COLORS.length,0)];
 function avatar(uid, label, small, online){
-  const a = h('div',{class:'avatar'+(small?' sm':''),style:`background:${colorOf(uid)}`}, Array.from(label||'?')[0] || '?');
+  const photo = users[uid] && users[uid].photo;
+  const a = h('div',{class:'avatar'+(small?' sm':''),style:`background:${colorOf(uid)}`}, typeof photo === 'string' && photo.startsWith('data:image/') ? h('img',{src:photo,alt:''}) : (Array.from(label||'?')[0] || '?'));
   if (online) a.append(h('span',{class:'on'}));
   return a;
 }
@@ -340,6 +370,7 @@ let readMap = {}; try { readMap = JSON.parse(localStorage.getItem('cs_read') || 
 let typingTimer = null, lastTypingSent = 0, pendingRead = new Set();
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
+function toggleQuiet(){ localStorage.setItem('cs_quiet', isQuiet() ? '0' : '1'); toast(isQuiet() ? '静かモード：着信音や通知音を鳴らしません' : '静かモードをオフにしました'); }
 const inFocus = () => !document.hidden && document.hasFocus();
 const isDm = r => r.col === 'dms';
 const myName = () => users[me?.uid]?.name || me?.displayName || pendingName || (me?.email||'').split('@')[0] || 'ゲスト';
@@ -453,6 +484,7 @@ function startApp(){
             {icon:'user',label:'プロフィールを編集',run:profileModal},
             {icon:'bell',label:'通知をオンにする',run:()=>setupPush(true)},
             {icon:'bell',label:'通知の状態を確認',run:notifyDiag},
+            {icon:'belloff',label:isQuiet() ? '静かモードをオフにする' : '静かモードをオンにする（音を鳴らさない）',run:toggleQuiet},
             {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
         h('div',{class:'side-actions'},
           h('button',{class:'btn',onclick:roomModal},ico('users',18),'ルーム'),
@@ -505,6 +537,7 @@ function listenRooms(){
     if (loaded[col]) for (const r of Object.values(next)){
       const p = bucket[col][r.id];
       if (p && ms(r.lastMsgTs) > ms(p.lastMsgTs) && r.lastUid && r.lastUid !== me.uid && (!inFocus() || r.id !== cur)) notify(r);
+      if (!p && col === 'rooms' && r.createdBy !== me.uid && (r.invited || []).includes(me.uid)) toast('「' + (r.name || 'ルーム') + '」に招待されました');
     }
     bucket[col] = next; loaded[col] = true;
     rooms = {...bucket.rooms, ...bucket.dms};
@@ -569,14 +602,15 @@ function renderHeader(){
     h('button',{class:'icon-btn back','aria-label':'一覧に戻る',onclick:()=>document.body.classList.remove('in-chat')}, ico('back')),
     avatar(other || r.createdBy || r.id, roomTitle(r), true, other && isOnline(other)),
     h('div',{class:'titles'}, h('div',{class:'t'},roomTitle(r)), h('div',{class:cls},sub)),
-    h('button',{class:'icon-btn','aria-label':isDm(r) ? '電話をかける' : 'グループ通話',onclick:isDm(r) ? startCall : groupCallAction}, ico('phone')),
+    h('button',{class:'icon-btn','aria-label':isDm(r) ? '電話をかける' : 'グループ通話',onclick:() => isDm(r) ? startCall(false) : groupCallAction(false)}, ico('phone')),
+    h('button',{class:'icon-btn','aria-label':'ビデオ通話',onclick:() => isDm(r) ? startCall(true) : groupCallAction(true)}, ico('video')),
     h('button',{class:'icon-btn','aria-label':'検索',onclick:searchModal}, ico('search')),
     h('button',{class:'icon-btn','aria-label':'ルームのメニュー',onclick:e=>roomMenu(e.currentTarget)}, ico('more')));
   const pb = $('#pinBar');
   if (pb){
     const items = [];
     if (!isDm(r) && r.callState === 'active' && r.callId && !gcall && Date.now() - ms(r.callTs) < 6 * 3600 * 1000)
-      items.push(h('button',{class:'callbar',onclick:groupCallAction}, ico('phone',18), h('span',{},'グループ通話中です。タップして参加')));
+      items.push(h('button',{class:'callbar',onclick:() => groupCallAction(false)}, ico('phone',18), h('span',{},'グループ通話中です。タップして参加')));
     if (r.pinnedMsg) items.push(h('div',{class:'pinbar',onclick:()=>jumpTo(r.pinnedMsgId)}, ico('pin',15), h('span',{},r.pinnedMsg)));
     pb.replaceChildren(...items);
   }
@@ -594,6 +628,7 @@ function roomMenu(anchor){
     items.push({icon:'copy',label:'ルームIDをコピー（'+r.id+'）',run:()=>copy(r.id,'ルームIDをコピーしました')});
     items.push({icon:'users',label:'メンバーを見る',run:()=>membersModal(r)});
     if (r.createdBy !== me.uid) items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
+    if (isAdmin(r)) items.push({icon:'users',label:'メンバーを招待',run:()=>inviteModal(r)});
     if (isAdmin(r)) items.push({icon:'image',label:r.imageAdminOnly ? '画像送信を全員に許可する' : '画像送信を管理者だけにする',run:()=>updateDoc(roomRef(r),{imageAdminOnly:!r.imageAdminOnly}).then(()=>toast(r.imageAdminOnly ? '画像送信を全員に許可しました' : '画像送信を管理者だけにしました')).catch(()=>toast('変更できませんでした'))});
     if (isAdmin(r)) items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
   } else items.push({icon:'trash',label:'このDMを削除',danger:true,run:()=>removeRoom(r)});
@@ -736,8 +771,10 @@ function msgEl(id, m){
   };
   const stamp = m.stamp && !m.deleted;
   const pic = !m.deleted && m.hasImage && typeof m.image === 'string' && m.image.startsWith('data:image/');
-  el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(pic?' imgb':'')+(m.deleted?' deleted':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
-    m.deleted ? 'メッセージは削除されました' : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像（タップで拡大）',loading:'lazy',onclick:ev=>{ ev.stopPropagation(); openImage(r, id, m); }}) : stamp ? m.text : linkify(m.text || '')));
+  const isPoll = !m.deleted && m.poll && Array.isArray(m.poll.options);
+  const toMe = !m.deleted && (m.mentions || []).includes(me.uid);
+  el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(pic?' imgb':'')+(m.deleted?' deleted':'')+(toMe?' mentioned':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
+    m.deleted ? 'メッセージは削除されました' : isPoll ? pollView(id, m) : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像（タップで拡大）',loading:'lazy',onclick:ev=>{ ev.stopPropagation(); openImage(r, id, m); }}) : stamp ? m.text : withMentions(linkify(m.text || ''), r)));
   if (!m.deleted){
     const rc = h('div',{class:'reacts'});
     Object.entries(m.reactions || {}).forEach(([e, list]) => {
@@ -750,7 +787,7 @@ function msgEl(id, m){
       h('span',{class:'sp'}),
       act('reply','返信',()=>setReply(id, m.hasImage ? '画像' : m.text)),
       pic ? act('search','拡大',()=>openImage(r, id, m)) : null,
-      mine && !m.stamp && !m.hasImage ? act('edit','編集',()=>editMsg(id,m)) : null,
+      mine && !m.stamp && !m.hasImage && !isPoll ? act('edit','編集',()=>editMsg(id,m)) : null,
       r && !isDm(r) ? act('pin', r.pinnedMsgId===id ? 'ピン解除' : 'ピン留め',()=>togglePin(id,m)) : null,
       mine ? act('trash','削除',()=>deleteMsg(id),'del') : null);
     el.append(bar);
@@ -758,6 +795,45 @@ function msgEl(id, m){
   const others = (m.readBy||[]).filter(u => u !== m.author).length;
   el.append(h('div',{class:'info'}, pic ? h('button',{class:'imore','aria-label':'メニューを開く',onclick:toggle}, ico('more',16)) : null, fmtTime(m.ts), m.edited && !m.deleted ? '編集済み' : null, mine && others && !m.deleted ? (r && isDm(r) ? '既読' : '既読 '+others) : null));
   return el;
+}
+function withMentions(parts, r){
+  const names = (r && !isDm(r) ? (r.members || []).map(nameOf) : []).filter(n => n && n !== '不明');
+  names.push('全員');
+  names.sort((a, b) => b.length - a.length);
+  const re = new RegExp('(@(?:' + names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '))', 'g');
+  return parts.flatMap(p => typeof p === 'string'
+    ? p.split(re).map((seg, i) => i % 2 ? h('span',{class:'mention'}, seg) : seg)
+    : [p]);
+}
+function findMentions(text, r){
+  if (!r || isDm(r)) return [];
+  const out = new Set();
+  if (text.includes('@全員')) (r.members || []).forEach(u => { if (u !== me.uid) out.add(u); });
+  (r.members || []).forEach(u => { const n = nameOf(u); if (u !== me.uid && n !== '不明' && text.includes('@' + n)) out.add(u); });
+  return [...out];
+}
+function pollView(id, m){
+  const p = m.poll, votes = m.votes || {};
+  const total = new Set(Object.values(votes).flat()).size;
+  const mine = m.author === me.uid;
+  return h('div',{class:'poll'},
+    h('div',{class:'pq'}, p.q),
+    ...p.options.map((o, i) => {
+      const list = votes['o' + i] || [], pct = total ? Math.round(list.length / total * 100) : 0, on = list.includes(me.uid);
+      return h('button',{class:'popt'+(on?' on':''),disabled:!!p.closed,'aria-label':o+' '+list.length+'票',onclick:ev=>{ ev.stopPropagation(); vote(id, m, i, on); }},
+        h('span',{class:'pbar',style:`width:${pct}%`}), h('span',{class:'ptxt'}, o), h('span',{class:'pcnt'}, list.length + '票'));
+    }),
+    h('div',{class:'pfoot'}, total + '人が投票' + (p.multi ? '・複数選択OK' : '') + (p.closed ? '・締め切り済み' : ''),
+      (!p.closed && mine) ? h('button',{class:'linklike',style:'font-size:12px',onclick:ev=>{ ev.stopPropagation(); updateDoc(mref(id), {'poll.closed':true}).catch(()=>toast('締め切れませんでした')); }},'締め切る') : null));
+}
+function vote(id, m, i, has){
+  const upd = {};
+  if (has) upd['votes.o' + i] = arrayRemove(me.uid);
+  else {
+    upd['votes.o' + i] = arrayUnion(me.uid);
+    if (!m.poll.multi) m.poll.options.forEach((_, j) => { if (j !== i) upd['votes.o' + j] = arrayRemove(me.uid); });
+  }
+  updateDoc(mref(id), upd).catch(()=>toast('投票できませんでした'));
 }
 const mref = id => doc(db, rooms[cur].col, cur, 'messages', id);
 function react(mid, e, has){ updateDoc(mref(mid), {['reactions.'+e]: has ? arrayRemove(me.uid) : arrayUnion(me.uid)}).catch(()=>toast('リアクションできませんでした')); }
@@ -815,25 +891,80 @@ function composer(){
   const fileIn = h('input',{type:'file',accept:'image/*',hidden:true,onchange:e=>{ const f = e.target.files[0]; e.target.value=''; if (f) sendImage(f); }});
   const imgBtn = h('button',{class:'icon-btn','aria-label':'画像を送る',onclick:()=>{ const r = rooms[cur]; if (r && !isDm(r) && r.imageAdminOnly && !isAdmin(r)) return toast('このルームでは、画像を送れるのは管理者だけです'); fileIn.click(); }}, ico('image',24));
   ta.addEventListener('paste', e => { const f = [...(e.clipboardData?.files||[])].find(x => x.type.startsWith('image/')); if (f){ e.preventDefault(); sendImage(f); } });
+  const sug = h('div',{class:'sug',hidden:true});
+  let sugFirst = null;
+  const pickMention = (c, key) => {
+    const pos = ta.selectionStart, start = pos - key.length - 1;
+    ta.value = ta.value.slice(0, start) + '@' + c.name + ' ' + ta.value.slice(pos);
+    const np = start + c.name.length + 2; ta.setSelectionRange(np, np);
+    sug.hidden = true; sugFirst = null; fit(); ta.focus();
+  };
+  const updateSug = () => {
+    const r = rooms[cur];
+    if (!r || isDm(r)){ sug.hidden = true; return; }
+    const before = ta.value.slice(0, ta.selectionStart);
+    const mt = /(?:^|\s)@([^\s@]*)$/.exec(before);
+    if (!mt){ sug.hidden = true; sugFirst = null; return; }
+    const key = mt[1].toLowerCase();
+    const cands = [...(r.members || []).filter(u => u !== me.uid).map(u => ({uid:u, name:nameOf(u)})), {uid:'*', name:'全員'}]
+      .filter(c => c.name !== '不明' && c.name.toLowerCase().includes(key)).slice(0, 6);
+    if (!cands.length){ sug.hidden = true; sugFirst = null; return; }
+    sugFirst = {c:cands[0], key:mt[1]};
+    sug.replaceChildren(...cands.map((c, i) => h('button',{type:'button',class:i === 0 ? 'first' : '',onmousedown:e=>e.preventDefault(),onclick:()=>pickMention(c, mt[1])},
+      c.uid === '*' ? ico('users',20) : avatar(c.uid, c.name, true, false), '@' + c.name)));
+    sug.hidden = false;
+  };
+  const pollBtn = h('button',{class:'icon-btn','aria-label':'投票を作る',onclick:pollModal}, ico('poll',24));
   const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,140) + 'px'; sendBtn.disabled = !ta.value.trim(); };
   const submit = () => { const t = ta.value; if (!t.trim()) return; ta.value = ''; fit(); doSend('text', t); if (!isMobile) ta.focus(); };
-  ta.addEventListener('input', () => { fit(); sendTyping(); });
-  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isMobile){ e.preventDefault(); submit(); } });
+  ta.addEventListener('input', () => { fit(); sendTyping(); updateSug(); });
+  ta.addEventListener('click', updateSug);
+  ta.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === 'Tab') && !e.isComposing && !sug.hidden && sugFirst){ e.preventDefault(); pickMention(sugFirst.c, sugFirst.key); return; }
+    if (e.key === 'Escape') sug.hidden = true;
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isMobile){ e.preventDefault(); submit(); } });
   ta.addEventListener('focus', () => panel.classList.remove('show'));
   sendBtn.addEventListener('click', submit);
   const rb = h('div',{class:'replybar',id:'replyBar',hidden:true});
-  return h('div',{class:'composer'}, panel, rb, h('div',{class:'crow'}, stampBtn, imgBtn, fileIn, ta, sendBtn));
+  const isGroupRoom = rooms[cur] && !isDm(rooms[cur]);
+  return h('div',{class:'composer'}, panel, sug, rb, h('div',{class:'crow'}, stampBtn, imgBtn, isGroupRoom ? pollBtn : null, fileIn, ta, sendBtn));
 }
 async function doSend(kind, text){
   text = String(text).trim(); const r = rooms[cur]; if (!text || !r) return;
   const data = {author:me.uid, text, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
   if (kind === 'stamp') data.stamp = true;
+  const mentions = kind === 'stamp' ? [] : findMentions(text, r);
+  if (mentions.length) data.mentions = mentions;
   if (replyTo){ data.replyTo = replyTo.id; data.replyToText = replyTo.text; replyTo = null; drawReply(); }
   try {
     await addDoc(msgCol(r), data);
     pushRelay(r, kind==='stamp' ? 'スタンプ '+text : text);
-    updateDoc(roomRef(r), {lastMsg: kind==='stamp' ? 'スタンプ '+text : text.slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, ['typing.'+me.uid]:null}).catch(()=>{});
+    updateDoc(roomRef(r), {lastMsg: kind==='stamp' ? 'スタンプ '+text : text.slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, lastMentions:mentions, ['typing.'+me.uid]:null}).catch(()=>{});
   } catch(e){ console.error(e); toast('送信できませんでした'); }
+}
+
+function pollModal(){
+  const r = rooms[cur]; if (!r) return;
+  const q = h('input',{class:'field',placeholder:'質問（例：今日やるゲームは？）',maxlength:'80'});
+  const opts = [h('input',{class:'field',placeholder:'選択肢1',maxlength:'40'}), h('input',{class:'field',placeholder:'選択肢2',maxlength:'40'})];
+  const list = h('div',{style:'display:grid;gap:8px'}, opts);
+  const add = h('button',{class:'btn ghost',onclick:()=>{ if (opts.length >= 6) return toast('選択肢は6つまでです'); const i = h('input',{class:'field',placeholder:'選択肢'+(opts.length+1),maxlength:'40'}); opts.push(i); list.append(i); i.focus(); }},'選択肢を追加');
+  const multi = h('input',{type:'checkbox'});
+  let close;
+  close = modal('投票を作る', [q, list, add, h('label',{style:'display:flex;gap:8px;align-items:center'}, multi, '複数選んでもOK'),
+    h('button',{class:'btn',onclick:async()=>{
+      const question = q.value.trim(), options = opts.map(i => i.value.trim()).filter(Boolean);
+      if (!question || options.length < 2) return toast('質問と、2つ以上の選択肢を入力してください');
+      close(); await sendPoll(r, question, options, multi.checked);
+    }},'送信')]);
+  setTimeout(() => q.focus(), 50);
+}
+async function sendPoll(r, question, options, multi){
+  const data = {author:me.uid, text:question, hasPoll:true, poll:{q:question, options, multi:!!multi, closed:false}, votes:{}, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
+  try {
+    await addDoc(msgCol(r), data);
+    pushRelay(r, '投票: ' + question);
+    updateDoc(roomRef(r), {lastMsg:'投票: ' + question.slice(0,70), lastMsgTs:serverTimestamp(), lastUid:me.uid, lastMentions:[]}).catch(()=>{});
+  } catch(e){ console.error(e); toast('投票を作れませんでした'); }
 }
 const fullCache = new Map();
 function openImage(r, mid, m){
@@ -961,6 +1092,36 @@ function sendTyping(){
 }
 
 /* ---------- create / join / DM ---------- */
+function userPicker(excluded){
+  const sel = new Set();
+  const q = h('input',{class:'field',placeholder:'名前で探す'});
+  const list = h('div',{style:'display:grid;gap:2px;max-height:240px;overflow-y:auto'});
+  const count = h('div',{style:'font-size:12px;color:var(--sub)'}, '0人を選んでいます');
+  const draw = () => {
+    const key = q.value.trim().toLowerCase();
+    const arr = Object.entries(users).filter(([u, d]) => u !== me.uid && !excluded.has(u) && d.name && (!key || d.name.toLowerCase().includes(key)))
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, 'ja'));
+    list.replaceChildren(...(arr.length ? arr.map(([u, d]) => {
+      const on = sel.has(u);
+      return h('button',{type:'button',class:'urow',role:'checkbox','aria-checked':String(on),onclick:()=>{ if (on) sel.delete(u); else sel.add(u); count.textContent = sel.size + '人を選んでいます'; draw(); }},
+        avatar(u, d.name, true, isOnline(u)), h('div',{class:'n'}, d.name), h('span',{style:'font-weight:700;color:var(--accent)'}, on ? '選択中' : ''));
+    }) : [h('div',{class:'empty'},'選べる人がいません')]));
+  };
+  q.addEventListener('input', draw); draw();
+  return {node:h('div',{style:'display:grid;gap:8px'}, h('label',{},'招待する人（あとから追加もできます）'), q, list, count), selected:() => [...sel]};
+}
+function inviteModal(r){
+  const pk = userPicker(new Set([...(r.members || []), ...(r.banned || [])]));
+  let close;
+  close = modal('メンバーを招待', [pk.node, h('button',{class:'btn',onclick:async()=>{
+    const ids = pk.selected(); if (!ids.length) return toast('招待する人を選んでください');
+    try {
+      await updateDoc(roomRef(r), {members: arrayUnion(...ids), invited: ids, inviteTs: serverTimestamp(), invitedBy: me.uid});
+      await sysMsg(r, myName() + 'が' + ids.map(nameOf).join('、') + 'を招待しました').catch(()=>{});
+      close(); toast(ids.length + '人を招待しました');
+    } catch(e){ console.error(e); toast('招待できませんでした'); }
+  }},'招待する')]);
+}
 function roomModal(){
   let mode = 'create', close;
   const body = h('div',{style:'display:grid;gap:12px'});
@@ -972,8 +1133,9 @@ function roomModal(){
     if (mode === 'create'){
       const name = h('input',{class:'field',placeholder:'ルーム名',maxlength:'40'});
       const desc = h('input',{class:'field',placeholder:'説明（なくてもOK）',maxlength:'80'});
-      const go = h('button',{class:'btn',onclick:async()=>{ if(!name.value.trim()) return; go.disabled=true; const ok = await createRoom(name.value.trim(), desc.value.trim()); if (ok) close(); else go.disabled=false; }},'作成する');
-      body.append(tabs, name, desc, go); setTimeout(()=>name.focus(),50);
+      const pk = userPicker(new Set());
+      const go = h('button',{class:'btn',onclick:async()=>{ if(!name.value.trim()) return; go.disabled=true; const ok = await createRoom(name.value.trim(), desc.value.trim(), pk.selected()); if (ok) close(); else go.disabled=false; }},'作成する');
+      body.append(tabs, name, desc, pk.node, go); setTimeout(()=>name.focus(),50);
     } else {
       const code = h('input',{class:'field',placeholder:'ルームID または 共有リンク',inputmode:'text'});
       const go = h('button',{class:'btn',onclick:async()=>{ if(!code.value.trim()) return; go.disabled=true; const ok = await joinByCode(code.value); if (ok) close(); else go.disabled=false; }},'参加する');
@@ -984,12 +1146,13 @@ function roomModal(){
   close = modal('ルーム', body);
 }
 function waitOpen(id){ let n = 0; const t = setInterval(()=>{ if (rooms[id]){ clearInterval(t); openRoom(id); } else if (++n > 40) clearInterval(t); }, 150); }
-async function createRoom(name, desc){
+async function createRoom(name, desc, invitees){
+  invitees = invitees || [];
   try {
     let code, tries = 0;
     do { code = String(Math.floor(100000 + Math.random()*900000)); if (!(await getDoc(doc(db,'rooms',code))).exists()) break; } while (++tries < 10);
-    await setDoc(doc(db,'rooms',code), {id:code, name, desc, members:[me.uid], createdBy:me.uid, createdAt:serverTimestamp(), lastMsg:'', lastMsgTs:serverTimestamp()});
-    await addDoc(collection(db,'rooms',code,'messages'), {type:'system', text:myName()+'がルームを作成しました', ts:serverTimestamp(), readBy:[], reactions:{}});
+    await setDoc(doc(db,'rooms',code), {id:code, name, desc, members:[me.uid, ...invitees], createdBy:me.uid, createdAt:serverTimestamp(), lastMsg:'', lastMsgTs:serverTimestamp(), ...(invitees.length ? {invited:invitees, inviteTs:serverTimestamp(), invitedBy:me.uid} : {})});
+    await addDoc(collection(db,'rooms',code,'messages'), {type:'system', text:myName()+'がルームを作成しました' + (invitees.length ? '（招待：' + invitees.map(nameOf).join('、') + '）' : ''), ts:serverTimestamp(), readBy:[], reactions:{}});
     waitOpen(code); return true;
   } catch(e){ console.error(e); toast('ルームを作成できませんでした（ルールを確認してください）'); return false; }
 }
@@ -1044,16 +1207,37 @@ async function startDm(uid){
 }
 
 /* ---------- profile ---------- */
+async function squareThumb(file, size){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load')); i.src = url; });
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, size, size);
+    g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+    return c.toDataURL('image/jpeg', 0.82);
+  } finally { URL.revokeObjectURL(url); }
+}
 function profileModal(){
   const u = users[me.uid] || {};
   const name = h('input',{class:'field',value:u.name || myName(),maxlength:'20','aria-label':'表示名'});
   let color = u.color || COLORS[0];
+  let photo; // undefined=変更なし / 文字列=新しい画像 / null=削除
+  const pv = h('div',{class:'pimg'});
+  const drawPv = () => {
+    const shown = photo === undefined ? u.photo : photo;
+    const a = h('div',{class:'avatar',style:`background:${color}`}, typeof shown === 'string' && shown.startsWith('data:image/') ? h('img',{src:shown,alt:''}) : (Array.from(name.value || myName())[0] || '?'));
+    const fi = h('input',{type:'file',accept:'image/*',hidden:true,onchange:async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { photo = await squareThumb(f, 160); drawPv(); } catch(err){ toast('この画像は読み込めませんでした'); } }});
+    pv.replaceChildren(a, h('div',{style:'display:grid;gap:6px'},
+      h('button',{class:'btn ghost',style:'padding:6px 14px;font-size:13px',onclick:()=>fi.click()},'画像を選ぶ'),
+      (shown ? h('button',{class:'btn ghost',style:'padding:6px 14px;font-size:13px',onclick:()=>{ photo = null; drawPv(); }},'画像を外す') : null)), fi);
+  };
   const sw = h('div',{class:'swatches'});
-  const draw = () => sw.replaceChildren(...COLORS.map(c => h('button',{class:c===color?'on':'',style:`background:${c}`,'aria-label':'色 '+c,onclick:()=>{ color=c; draw(); }})));
+  const draw = () => { sw.replaceChildren(...COLORS.map(c => h('button',{class:c===color?'on':'',style:`background:${c}`,'aria-label':'色 '+c,onclick:()=>{ color=c; draw(); }}))); drawPv(); };
   draw();
   let close;
-  close = modal('プロフィール', [h('label',{},'表示名'), name, h('label',{},'アイコンの色'), sw,
-    h('button',{class:'btn',onclick:async()=>{ const n = name.value.trim(); if (!n) return; try{ await updateDoc(doc(db,'users',me.uid),{name:n,color}); close(); toast('保存しました'); }catch(e){ toast('保存できませんでした'); } }},'保存する')]);
+  close = modal('プロフィール', [h('label',{},'アイコン'), pv, h('label',{},'表示名'), name, h('label',{},'アイコンの色（画像がないとき）'), sw,
+    h('button',{class:'btn',onclick:async()=>{ const n = name.value.trim(); if (!n) return; try{ const upd = {name:n, color}; if (photo === null) upd.photo = deleteField(); else if (typeof photo === 'string') upd.photo = photo; await updateDoc(doc(db,'users',me.uid), upd); close(); toast('保存しました'); }catch(e){ toast('保存できませんでした'); } }},'保存する')]);
 }
 
 
@@ -1062,18 +1246,23 @@ const canShare = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayM
 async function getScreen(onEnded){
   if (!canShare){ toast('この端末・ブラウザは、画面共有に対応していません（パソコンのブラウザで使えます）'); return null; }
   try {
-    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:15, max:30}, width:{max:1920}, height:{max:1080}}, audio:false});
+    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:15, max:30}, width:{max:1920}, height:{max:1080}}, audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false, suppressLocalAudioPlayback:true}});
     const t = st.getVideoTracks()[0];
     try { t.contentHint = 'detail'; } catch(e){}
     t.onended = onEnded;
     return st;
   } catch(e){ if (e.name !== 'NotAllowedError') toast('画面共有を始められませんでした'); return null; }
 }
-async function setSender(sender, track){
+async function getCam(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('この端末・ブラウザは、カメラに対応していません'); return null; }
+  try { return await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:20, max:24}, facingMode:'user'}, audio:false}); }
+  catch(e){ toast('カメラが使えません。ブラウザのカメラの許可を確認してください'); return null; }
+}
+async function setSender(sender, track, maxBps){
   if (!sender) throw new Error('no sender');
   await sender.replaceTrack(track);
   if (track){
-    try { const p = sender.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; p.encodings[0].maxBitrate = 1500000; await sender.setParameters(p); } catch(e){}
+    try { const p = sender.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; p.encodings[0].maxBitrate = maxBps || 1500000; await sender.setParameters(p); } catch(e){}
   }
 }
 function makeVid(stream){
@@ -1092,6 +1281,7 @@ const fmtDur = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60
 
 function startRing(){
   stopRing();
+  if (isQuiet()){ navigator.vibrate && navigator.vibrate([300,150,300]); ringTimer = setInterval(() => { navigator.vibrate && navigator.vibrate([300,150,300]); }, 1600); return; }
   try {
     ringCtx = new (window.AudioContext || window.webkitAudioContext)();
     const beep = () => { if (!ringCtx) return; const o = ringCtx.createOscillator(), g = ringCtx.createGain(); o.frequency.value = 480; g.gain.value = 0.08; o.connect(g); g.connect(ringCtx.destination); o.start(); o.stop(ringCtx.currentTime + 0.35); };
@@ -1107,8 +1297,16 @@ function newCall(o){
   const c = {...o, pc, audio, pending:[], unsubs:[], state:'ringing', connectedAt:0, muted:false};
   o.stream.getTracks().forEach(t => pc.addTrack(t, o.stream));
   pc.ontrack = e => {
-    if (e.track.kind === 'audio'){ audio.srcObject = e.streams[0] || new MediaStream([e.track]); audio.play().catch(()=>{}); }
-    else { c.remoteVStream = new MediaStream([e.track]); drawCallUI(); }
+    if (e.track.kind === 'audio'){
+      if (e.streams && e.streams[0]){ audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
+      else { if (!c.saudio){ c.saudio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(c.saudio); } c.saudio.srcObject = new MediaStream([e.track]); c.saudio.play().catch(()=>{}); }
+    }
+    else {
+      const vs = pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+      if (vs.indexOf(e.transceiver) === 1) c.remoteCStream = new MediaStream([e.track]);
+      else c.remoteVStream = new MediaStream([e.track]);
+      drawCallUI();
+    }
   };
   pc.onconnectionstatechange = () => {
     const st = pc.connectionState;
@@ -1129,26 +1327,32 @@ async function getMic(){
   catch(e){ toast('マイクが使えません。ブラウザのマイクの許可を確認してください'); return null; }
 }
 
-async function startCall(){
+async function startCall(withCam){
   const r = rooms[cur];
   if (!r || !isDm(r)) return;
   if (call || incoming || gcall) return toast('ほかの通話中です');
   const stream = await getMic(); if (!stream) return;
+  const camStream = withCam ? await getCam() : null;
   const peer = otherUid(r);
   const callRef = doc(collection(db, r.col, r.id, 'calls'));
   const c = newCall({role:'caller', r, dmId:r.id, callId:callRef.id, stream, peer});
   try {
     c.pc.onicecandidate = e => { if (e.candidate) addDoc(collection(callRef,'callerCandidates'), candJson(e.candidate)).catch(()=>{}); };
     c.vtr = c.pc.addTransceiver('video', {direction:'sendrecv'});
+    c.atr = c.pc.addTransceiver('audio', {direction:'sendrecv'});
+    c.ctr = c.pc.addTransceiver('video', {direction:'sendrecv'});
+    if (camStream){ c.cam = camStream; await setSender(c.ctr.sender, camStream.getVideoTracks()[0], 450000).catch(()=>{}); }
     const offer = await c.pc.createOffer();
     await c.pc.setLocalDescription(offer);
-    await setDoc(callRef, {offer:{type:offer.type, sdp:offer.sdp}, caller:me.uid, callee:peer, createdAt:serverTimestamp()});
+    await setDoc(callRef, {offer:{type:offer.type, sdp:offer.sdp}, caller:me.uid, callee:peer, createdAt:serverTimestamp(), ...(c.cam ? {cam:{[me.uid]:true}} : {})});
     await updateDoc(roomRef(r), {callId:callRef.id, callState:'ringing', callFrom:me.uid, callTs:serverTimestamp()});
   } catch(e){ console.error(e); toast('電話をかけられませんでした（Firestoreのルールを確認してください）'); c.silent = true; finishCall(c, 'ended', false); return; }
   c.unsubs.push(onSnapshot(callRef, sn => {
     const d = sn.data();
     const rs = !!(d && d.sharing && d.sharing !== me.uid);
     if (rs !== !!c.remoteSharing){ c.remoteSharing = rs; drawCallUI(); }
+    const rc = !!(d && d.cam && d.cam[c.peer]);
+    if (rc !== !!c.remoteCam){ c.remoteCam = rc; drawCallUI(); }
     if (d && d.answer && !c.pc.currentRemoteDescription && !c.gotAnswer){
       c.gotAnswer = true;
       c.pc.setRemoteDescription(d.answer).then(() => flushCands(c)).catch(()=>{});
@@ -1177,13 +1381,16 @@ async function answerCall(){
   try {
     c.pc.onicecandidate = e => { if (e.candidate) addDoc(collection(callRef,'calleeCandidates'), candJson(e.candidate)).catch(()=>{}); };
     await c.pc.setRemoteDescription(d.offer);
-    c.vtr = c.pc.getTransceivers().find(t => t.receiver.track.kind === 'video') || null;
-    if (c.vtr) c.vtr.direction = 'sendrecv';
+    const vts = c.pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+    c.vtr = vts[0] || null; c.ctr = vts[1] || null;
+    vts.forEach(t => { t.direction = 'sendrecv'; });
+    c.atr = c.pc.getTransceivers().filter(t => t.receiver.track.kind === 'audio')[1] || null;
+    if (c.atr) c.atr.direction = 'sendrecv';
     const ans = await c.pc.createAnswer();
     await c.pc.setLocalDescription(ans);
     await updateDoc(callRef, {answer:{type:ans.type, sdp:ans.sdp}});
     await updateDoc(roomRef(r), {callState:'active'});
-    c.unsubs.push(onSnapshot(callRef, sn => { const dd = sn.data(); const rs = !!(dd && dd.sharing && dd.sharing !== me.uid); if (rs !== !!c.remoteSharing){ c.remoteSharing = rs; drawCallUI(); } }));
+    c.unsubs.push(onSnapshot(callRef, sn => { const dd = sn.data(); const rs = !!(dd && dd.sharing && dd.sharing !== me.uid); if (rs !== !!c.remoteSharing){ c.remoteSharing = rs; drawCallUI(); } const rc = !!(dd && dd.cam && dd.cam[c.peer]); if (rc !== !!c.remoteCam){ c.remoteCam = rc; drawCallUI(); } }));
     c.unsubs.push(onSnapshot(collection(callRef,'callerCandidates'), sn => sn.docChanges().forEach(ch => { if (ch.type === 'added') addCand(c, ch.doc.data()); })));
     flushCands(c);
     drawCallUI();
@@ -1201,9 +1408,9 @@ async function finishCall(c, state, writeRemote){
   clearTimeout(c.ringTimeout); clearTimeout(c.dropTimer); clearInterval(c.tick); stopRing();
   c.unsubs.forEach(f => f());
   try { c.stream.getTracks().forEach(t => t.stop()); } catch(e){}
-  stopStream(c.screen); c.screen = null;
+  stopStream(c.screen); c.screen = null; stopStream(c.cam); c.cam = null;
   try { c.pc.close(); } catch(e){}
-  c.audio.remove();
+  c.audio.remove(); if (c.saudio) c.saudio.remove();
   if (call === c) call = null;
   const ui = $('#callUI'); if (ui) ui.remove();
   const dur = c.connectedAt ? Math.round((Date.now() - c.connectedAt) / 1000) : 0;
@@ -1221,7 +1428,13 @@ async function toggleShareDm(c){
   if (!c.vtr) return toast('相手のアプリが古いため、画面共有できません');
   const st = await getScreen(() => stopShareDm(c)); if (!st) return;
   c.screen = st;
-  try { await setSender(c.vtr.sender, st.getVideoTracks()[0]); updateDoc(callDocRef(c), {sharing:me.uid}).catch(()=>{}); }
+  try {
+    await setSender(c.vtr.sender, st.getVideoTracks()[0]);
+    const at = st.getAudioTracks()[0];
+    if (at && c.atr) await c.atr.sender.replaceTrack(at);
+    else toast('画面だけ共有しました。音も届けるには、共有の選択画面で「システム音声」または「タブの音声」にチェックを入れてください');
+    updateDoc(callDocRef(c), {sharing:me.uid}).catch(()=>{});
+  }
   catch(e){ stopStream(st); c.screen = null; return toast('画面共有を始められませんでした'); }
   drawCallUI();
 }
@@ -1229,29 +1442,62 @@ async function stopShareDm(c){
   if (!c.screen) return;
   stopStream(c.screen); c.screen = null;
   try { await c.vtr.sender.replaceTrack(null); } catch(e){}
+  try { if (c.atr) await c.atr.sender.replaceTrack(null); } catch(e){}
   updateDoc(callDocRef(c), {sharing:null}).catch(()=>{});
   drawCallUI();
+}
+async function toggleCamDm(c){
+  if (c.cam) return stopCamDm(c, true);
+  if (!c.ctr) return toast('相手のアプリが古いため、カメラを使えません');
+  const st = await getCam(); if (!st) return;
+  try { await setSender(c.ctr.sender, st.getVideoTracks()[0], 450000); }
+  catch(e){ stopStream(st); return toast('カメラを始められませんでした'); }
+  c.cam = st; c.myvid = null;
+  updateDoc(callDocRef(c), {['cam.' + me.uid]: true}).catch(()=>{});
+  drawCallUI();
+}
+async function stopCamDm(c, announce){
+  if (!c.cam) return;
+  stopStream(c.cam); c.cam = null; c.myvid = null;
+  try { if (c.ctr) await c.ctr.sender.replaceTrack(null); } catch(e){}
+  if (announce) updateDoc(callDocRef(c), {['cam.' + me.uid]: false}).catch(()=>{});
+  drawCallUI();
+}
+function camVid(stream, cls, mirror){
+  const v = makeVid(stream); v.className = cls; if (mirror) v.style.transform = 'scaleX(-1)'; return v;
 }
 function drawCallUI(){
   const c = call; if (!c) return;
   let ui = $('#callUI');
   if (!ui){ ui = h('div',{class:'callov',id:'callUI',role:'dialog','aria-label':'通話'}); document.body.append(ui); }
   const name = nameOf(c.peer);
-  let rv = null;
+  let screenV = null, camV = null;
   if (c.remoteSharing && c.remoteVStream){
     if (!c.vid){ c.vid = makeVid(c.remoteVStream); }
     else if (c.vid.srcObject !== c.remoteVStream) c.vid.srcObject = c.remoteVStream;
-    rv = c.vid;
+    screenV = c.vid;
   }
+  if (c.remoteCam && c.remoteCStream){
+    if (!c.cvid){ c.cvid = camVid(c.remoteCStream, 'rv', false); }
+    else if (c.cvid.srcObject !== c.remoteCStream) c.cvid.srcObject = c.remoteCStream;
+    c.cvid.className = screenV ? 'pv' : 'rv';
+    camV = c.cvid;
+  }
+  const main = screenV || camV;
+  const pips = [];
+  if (screenV && camV) pips.push(camV);
+  if (c.cam){ if (!c.myvid) c.myvid = camVid(c.cam, 'pv', true); pips.push(c.myvid); }
   ui.replaceChildren(
-    rv || avatar(c.peer, name, false, false),
-    h('div',{class:'cname'}, rv ? name + 'さんの画面' : name),
+    main || avatar(c.peer, name, false, false),
+    pips.length ? h('div',{class:'pips'}, pips) : null,
+    h('div',{class:'cname'}, screenV ? name + 'さんの画面' : name),
     h('div',{class:'cstat',id:'callStat'}, callStatus(c) + (c.screen ? '・画面を共有中' : '')),
     h('div',{class:'cbtns'},
       h('button',{class:'cbtn'+(c.muted?' on':''),'aria-label':c.muted?'ミュートを解除':'ミュート',onclick:()=>{ c.muted = !c.muted; c.stream.getAudioTracks().forEach(t => t.enabled = !c.muted); drawCallUI(); }}, ico(c.muted ? 'micoff' : 'mic', 28)),
+      h('button',{class:'cbtn'+(c.cam?' on':''),'aria-label':c.cam?'カメラをオフにする':'カメラをオンにする',onclick:()=>toggleCamDm(c)}, ico(c.cam ? 'video' : 'videooff', 28)),
       h('button',{class:'cbtn'+(c.screen?' on':''),'aria-label':c.screen?'画面共有をやめる':'画面を共有する',onclick:()=>toggleShareDm(c)}, ico('screen', 28)),
       h('button',{class:'cbtn red','aria-label':'電話を切る',onclick:()=>finishCall(c, 'ended', true)}, ico('phone', 28))));
-  if (rv) rv.play().catch(()=>{});
+  [screenV, camV, ...pips].forEach(v => { if (v) v.play().catch(()=>{}); });
   if (c.state === 'active' && !c.tick) c.tick = setInterval(() => { const s = $('#callStat'); if (s) s.textContent = callStatus(c) + (c.screen ? '・画面を共有中' : ''); }, 1000);
 }
 function callStatus(c){
@@ -1307,19 +1553,19 @@ function callWatch(){
 let gcall = null;
 const GMAX = 6;
 
-async function groupCallAction(){
+async function groupCallAction(withCam){
   const r = rooms[cur]; if (!r) return;
   if (gcall) return toast('すでに通話中です');
   if (call || incoming) return toast('ほかの通話中です');
   const active = r.callState === 'active' && r.callId && Date.now() - ms(r.callTs) < 6 * 3600 * 1000;
-  if (active) return joinGroupCall(r, r.callId, false);
-  return joinGroupCall(r, doc(collection(db, r.col, r.id, 'calls')).id, true);
+  if (active) return joinGroupCall(r, r.callId, false, !!withCam);
+  return joinGroupCall(r, doc(collection(db, r.col, r.id, 'calls')).id, true, !!withCam);
 }
 const peerRec = (g, uid) => { let p = g.peers.get(uid); if (!p){ p = {pc:null, audio:null, pending:[], state:'connecting'}; g.peers.set(uid, p); } return p; };
 const sendSig = (g, to, type, data) => addDoc(collection(g.callRef, 'signals'), {from:me.uid, to, type, data, ts:serverTimestamp()}).catch(()=>{});
 function closePeer(g, uid){
   const p = g.peers.get(uid);
-  if (p){ try { p.pc && p.pc.close(); } catch(e){} p.audio && p.audio.remove(); g.peers.delete(uid); }
+  if (p){ try { p.pc && p.pc.close(); } catch(e){} p.audio && p.audio.remove(); p.saudio && p.saudio.remove(); g.peers.delete(uid); }
 }
 function makePc(g, uid){
   const p = peerRec(g, uid);
@@ -1328,8 +1574,16 @@ function makePc(g, uid){
   p.audio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(p.audio);
   g.stream.getTracks().forEach(t => pc.addTrack(t, g.stream));
   pc.ontrack = e => {
-    if (e.track.kind === 'audio'){ p.audio.srcObject = e.streams[0] || new MediaStream([e.track]); p.audio.play().catch(()=>{}); }
-    else { p.vstream = new MediaStream([e.track]); drawGroupUI(); }
+    if (e.track.kind === 'audio'){
+      if (e.streams && e.streams[0]){ p.audio.srcObject = e.streams[0]; p.audio.play().catch(()=>{}); }
+      else { if (!p.saudio){ p.saudio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(p.saudio); } p.saudio.srcObject = new MediaStream([e.track]); p.saudio.play().catch(()=>{}); }
+    }
+    else {
+      const vs = pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+      if (vs.indexOf(e.transceiver) === 1) p.cstream = new MediaStream([e.track]);
+      else p.vstream = new MediaStream([e.track]);
+      drawGroupUI();
+    }
   };
   pc.onicecandidate = e => { if (e.candidate) sendSig(g, uid, 'candidate', candJson(e.candidate)); };
   pc.onconnectionstatechange = () => {
@@ -1343,6 +1597,8 @@ function makePc(g, uid){
 async function offerTo(g, uid){
   const p = makePc(g, uid);
   p.vtr = p.pc.addTransceiver('video', {direction:'sendrecv'});
+  p.atr = p.pc.addTransceiver('audio', {direction:'sendrecv'});
+  p.ctr = p.pc.addTransceiver('video', {direction:'sendrecv'});
   const off = await p.pc.createOffer();
   await p.pc.setLocalDescription(off);
   sendSig(g, uid, 'offer', {type:off.type, sdp:off.sdp});
@@ -1355,19 +1611,22 @@ async function handleSignal(g, sg){
       if (old && old.pc && old.pc.remoteDescription){ const keep = old.pending; closePeer(g, uid); peerRec(g, uid).pending = keep; }
       const p = makePc(g, uid);
       await p.pc.setRemoteDescription(sg.data);
-      p.vtr = p.pc.getTransceivers().find(t => t.receiver.track.kind === 'video') || null;
-      if (p.vtr) p.vtr.direction = 'sendrecv';
+      const vts = p.pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+      p.vtr = vts[0] || null; p.ctr = vts[1] || null;
+      vts.forEach(t => { t.direction = 'sendrecv'; });
+      p.atr = p.pc.getTransceivers().filter(t => t.receiver.track.kind === 'audio')[1] || null;
+      if (p.atr) p.atr.direction = 'sendrecv';
       const ans = await p.pc.createAnswer();
       await p.pc.setLocalDescription(ans);
       sendSig(g, uid, 'answer', {type:ans.type, sdp:ans.sdp});
-      if (g.screen && p.vtr) setSender(p.vtr.sender, g.screen.getVideoTracks()[0]).catch(()=>{});
+      attachScreen(g, p); attachCam(g, p);
       p.pending.splice(0).forEach(c => p.pc.addIceCandidate(c).catch(()=>{}));
     } else if (sg.type === 'answer'){
       const p = g.peers.get(uid);
       if (p && p.pc && !p.pc.currentRemoteDescription){
         await p.pc.setRemoteDescription(sg.data);
         p.pending.splice(0).forEach(c => p.pc.addIceCandidate(c).catch(()=>{}));
-        if (g.screen && p.vtr) setSender(p.vtr.sender, g.screen.getVideoTracks()[0]).catch(()=>{});
+        attachScreen(g, p); attachCam(g, p);
       }
     } else if (sg.type === 'candidate'){
       const p = peerRec(g, uid);
@@ -1376,9 +1635,10 @@ async function handleSignal(g, sg){
   } catch(e){ console.warn('signal', e); }
 }
 
-async function joinGroupCall(r, callId, isStart){
+async function joinGroupCall(r, callId, isStart, withCam){
   if (gcall) return;
   const stream = await getMic(); if (!stream) return;
+  const camStream = withCam ? await getCam() : null;
   const callRef = doc(db, r.col, r.id, 'calls', callId);
   let live = [];
   try {
@@ -1386,11 +1646,11 @@ async function joinGroupCall(r, callId, isStart){
     live = pd.docs.filter(d => d.id !== me.uid && Date.now() - ms(d.data({serverTimestamps:'estimate'}).ts) < 90000);
   } catch(e){ stream.getTracks().forEach(t => t.stop()); console.error(e); return toast('通話に参加できませんでした（Firestoreのルールを確認してください）'); }
   if (live.length >= GMAX - 1){ stream.getTracks().forEach(t => t.stop()); return toast('グループ通話は、' + GMAX + '人までです'); }
-  const g = gcall = {r, callId, callRef, stream, peers:new Map(), present:new Set(), names:{}, ptime:{}, sharing:{}, vids:{}, unsubs:[], muted:false, startedAt:Date.now()};
+  const g = gcall = {r, callId, callRef, stream, peers:new Map(), present:new Set(), names:{}, ptime:{}, sharing:{}, vids:{}, cams:{}, cvids:{}, cam:camStream, unsubs:[], muted:false, startedAt:Date.now()};
   try {
     const old = await getDocs(query(collection(callRef, 'signals'), where('to', '==', me.uid)));
     await Promise.all(old.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
-    await setDoc(doc(callRef, 'peers', me.uid), {uid:me.uid, name:myName(), ts:serverTimestamp()});
+    await setDoc(doc(callRef, 'peers', me.uid), {uid:me.uid, name:myName(), ts:serverTimestamp(), cam:!!camStream});
     if (isStart || !(r.callState === 'active' && r.callId === callId)){
       await setDoc(callRef, {startedBy:me.uid, createdAt:serverTimestamp()}, {merge:true});
       await updateDoc(roomRef(r), {callId, callState:'active', callFrom:me.uid, callTs:serverTimestamp()});
@@ -1405,9 +1665,10 @@ async function joinGroupCall(r, callId, isStart){
     sn.docChanges().forEach(ch => {
       const uid = ch.doc.id; if (uid === me.uid) return;
       const d = ch.doc.data({serverTimestamps:'estimate'});
-      if (ch.type === 'removed'){ g.present.delete(uid); closePeer(g, uid); delete g.sharing[uid]; delete g.vids[uid]; return; }
+      if (ch.type === 'removed'){ g.present.delete(uid); closePeer(g, uid); delete g.sharing[uid]; delete g.vids[uid]; delete g.cams[uid]; delete g.cvids[uid]; return; }
       g.ptime[uid] = ms(d.ts) || Date.now();
       g.sharing[uid] = !!d.sharing;
+      g.cams[uid] = !!d.cam;
       if (Date.now() - g.ptime[uid] > 90000) return;
       g.names[uid] = d.name;
       if (!g.present.has(uid)){
@@ -1429,19 +1690,44 @@ async function joinGroupCall(r, callId, isStart){
   drawGroupUI();
 }
 
+function attachCam(g, p){
+  if (!g.cam || !p.ctr) return;
+  setSender(p.ctr.sender, g.cam.getVideoTracks()[0], 400000).catch(()=>{});
+}
+async function toggleCamGroup(g){
+  if (g.cam){
+    stopStream(g.cam); g.cam = null; g.myvid = null;
+    await Promise.all([...g.peers.values()].filter(p => p.ctr).map(p => p.ctr.sender.replaceTrack(null).catch(()=>{})));
+    updateDoc(doc(g.callRef, 'peers', me.uid), {cam:false}).catch(()=>{});
+    return drawGroupUI();
+  }
+  const st = await getCam(); if (!st) return;
+  g.cam = st; g.myvid = null;
+  [...g.peers.values()].forEach(p => attachCam(g, p));
+  updateDoc(doc(g.callRef, 'peers', me.uid), {cam:true}).catch(()=>{});
+  drawGroupUI();
+}
+function attachScreen(g, p){
+  if (!g.screen) return;
+  const v = g.screen.getVideoTracks()[0], a = g.screen.getAudioTracks()[0];
+  if (p.vtr && v) setSender(p.vtr.sender, v).catch(()=>{});
+  if (p.atr && a) p.atr.sender.replaceTrack(a).catch(()=>{});
+}
 async function toggleShareGroup(g){
   if (g.screen) return stopShareGroup(g);
   const st = await getScreen(() => stopShareGroup(g)); if (!st) return;
   g.screen = st;
   const tr = st.getVideoTracks()[0];
-  await Promise.all([...g.peers.values()].filter(p => p.vtr).map(p => setSender(p.vtr.sender, tr).catch(()=>{})));
+  const at = st.getAudioTracks()[0];
+  await Promise.all([...g.peers.values()].filter(p => p.vtr).map(p => Promise.all([setSender(p.vtr.sender, tr).catch(()=>{}), (at && p.atr) ? p.atr.sender.replaceTrack(at).catch(()=>{}) : null])));
+  if (!at) toast('画面だけ共有しました。音も届けるには、共有の選択画面で「システム音声」または「タブの音声」にチェックを入れてください');
   updateDoc(doc(g.callRef, 'peers', me.uid), {sharing:true}).catch(()=>{});
   drawGroupUI();
 }
 async function stopShareGroup(g){
   if (!g.screen) return;
   stopStream(g.screen); g.screen = null;
-  await Promise.all([...g.peers.values()].filter(p => p.vtr).map(p => p.vtr.sender.replaceTrack(null).catch(()=>{})));
+  await Promise.all([...g.peers.values()].filter(p => p.vtr).map(p => Promise.all([p.vtr.sender.replaceTrack(null).catch(()=>{}), p.atr ? p.atr.sender.replaceTrack(null).catch(()=>{}) : null])));
   updateDoc(doc(g.callRef, 'peers', me.uid), {sharing:false}).catch(()=>{});
   drawGroupUI();
 }
@@ -1450,11 +1736,18 @@ function drawGroupUI(){
   const g = gcall; if (!g) return;
   let ui = $('#gcallUI');
   if (!ui){ ui = h('div',{class:'callov',id:'gcallUI',role:'dialog','aria-label':'グループ通話'}); document.body.append(ui); }
-  const who = (uid, label, st) => h('div',{class:'gp'}, avatar(uid, label, false, false), h('div',{}, label), h('small',{}, st));
-  const list = [who(me.uid, myName(), '自分' + (g.muted ? '（ミュート中）' : ''))];
+  const who = (uid, label, st, vid) => h('div',{class:'gp'+(vid?' cam':'')}, vid || avatar(uid, label, false, false), h('div',{}, label), h('small',{}, st));
+  const peerCam = uid => {
+    const p = g.peers.get(uid);
+    if (!(g.cams[uid] && p && p.cstream)) return null;
+    if (!g.cvids[uid] || g.cvids[uid].srcObject !== p.cstream) g.cvids[uid] = camVid(p.cstream, 'gpv', false);
+    return g.cvids[uid];
+  };
+  if (g.cam && !g.myvid) g.myvid = camVid(g.cam, 'gpv', true);
+  const list = [who(me.uid, myName(), '自分' + (g.muted ? '（ミュート中）' : ''), g.cam ? g.myvid : null)];
   g.present.forEach(uid => {
     const p = g.peers.get(uid);
-    list.push(who(uid, g.names[uid] || nameOf(uid), !p || !p.pc ? '待っています…' : p.state === 'active' ? '通話中' : p.state === 'failed' ? '接続できません' : '接続中…'));
+    list.push(who(uid, g.names[uid] || nameOf(uid), !p || !p.pc ? '待っています…' : p.state === 'active' ? '通話中' : p.state === 'failed' ? '接続できません' : '接続中…', peerCam(uid)));
   });
   const sharer = [...g.present].find(u => g.sharing[u] && g.peers.get(u) && g.peers.get(u).vstream);
   let gv = null;
@@ -1470,9 +1763,11 @@ function drawGroupUI(){
     h('div',{class:'gl'}, list),
     h('div',{class:'cbtns'},
       h('button',{class:'cbtn'+(g.muted?' on':''),'aria-label':g.muted?'ミュートを解除':'ミュート',onclick:()=>{ g.muted = !g.muted; g.stream.getAudioTracks().forEach(t => t.enabled = !g.muted); drawGroupUI(); }}, ico(g.muted ? 'micoff' : 'mic', 28)),
+      h('button',{class:'cbtn'+(g.cam?' on':''),'aria-label':g.cam?'カメラをオフにする':'カメラをオンにする',onclick:()=>toggleCamGroup(g)}, ico(g.cam ? 'video' : 'videooff', 28)),
       h('button',{class:'cbtn'+(g.screen?' on':''),'aria-label':g.screen?'画面共有をやめる':'画面を共有する',onclick:()=>toggleShareGroup(g)}, ico('screen', 28)),
       h('button',{class:'cbtn red','aria-label':'通話から抜ける',onclick:leaveGroupCall}, ico('phone', 28))));
   if (gv){ const vv = gv.querySelector('video'); if (vv) vv.play().catch(()=>{}); }
+  document.querySelectorAll('#gcallUI .gl video').forEach(v => v.play().catch(()=>{}));
 }
 async function leaveGroupCall(){
   const g = gcall; if (!g || g.left) return;
@@ -1481,7 +1776,7 @@ async function leaveGroupCall(){
   g.unsubs.forEach(f => f());
   [...g.peers.keys()].forEach(uid => closePeer(g, uid));
   g.stream.getTracks().forEach(t => t.stop());
-  stopStream(g.screen); g.screen = null;
+  stopStream(g.screen); g.screen = null; stopStream(g.cam); g.cam = null;
   const ui = $('#gcallUI'); if (ui) ui.remove();
   renderHeader();
   try { await deleteDoc(doc(g.callRef, 'peers', me.uid)); } catch(e){}
@@ -1498,11 +1793,12 @@ async function leaveGroupCall(){
 
 /* ---------- notifications ---------- */
 async function notify(r){
-  const body = r.lastMsg || '新しいメッセージ';
+  const mentioned = (r.lastMentions || []).includes(me.uid);
+  const body = (mentioned ? 'あなた宛: ' : '') + (r.lastMsg || '新しいメッセージ');
   if (inFocus()){ toast(roomTitle(r) + ': ' + body.slice(0,30)); return; }
   if (document.hidden && pushDone) return; // 画面が隠れているときは、プッシュ通知が届く（二重に出さない）
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const opts = {body, icon:'icon-192.png?v=2', badge:'icon-192.png?v=2', tag:r.id, renotify:true, data:{url:'/chat-app/?room='+r.id}};
+  const opts = {body, icon:'icon-192.png?v=2', badge:'icon-192.png?v=2', tag:r.id, renotify:true, silent:isQuiet(), data:{url:'/chat-app/?room='+r.id}};
   try {
     const reg = await navigator.serviceWorker?.ready;
     if (reg) await reg.showNotification(roomTitle(r), opts);
