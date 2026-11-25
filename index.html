@@ -234,6 +234,7 @@ input,textarea{font:inherit;color:inherit}
 .pips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .callov .gpv{width:152px;aspect-ratio:4/3;border-radius:10px;background:#000;object-fit:cover;cursor:zoom-in}
 .gl .gp.cam{width:156px}
+body.hide-read .rd{display:none}
 </style>
 </head>
 <body>
@@ -244,7 +245,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '3.6 (2026-11-25)';
+const VERSION = '3.8 (2026-11-25)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -295,7 +296,7 @@ const IC = {
   micoff:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M2 2l20 20"/>',
   screen:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
   poll:'<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V7M17 16v-3"/>',
-  game:'<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5M16 11h.01M18 14h.01"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',belloff:'<path d="M13.7 21a2 2 0 0 1-3.4 0M18 8a6 6 0 0 0-9.3-5M6 6c0 7-3 9-3 9h13M2 2l20 20"/>',
+  memo:'<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',brush:'<path d="M4 20c4 0 5-2 5-4 0-1-1-2-2-2s-3 1-3 6z"/><path d="M9 14L19 4l1 1-10 10"/>',grid9:'<path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01" stroke-width="3.5"/>',game:'<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5M16 11h.01M18 14h.01"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',belloff:'<path d="M13.7 21a2 2 0 0 1-3.4 0M18 8a6 6 0 0 0-9.3-5M6 6c0 7-3 9-3 9h13M2 2l20 20"/>',
   video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/>',
   videooff:'<path d="M16 16v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L22 8v8M2 2l20 20"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
@@ -416,6 +417,8 @@ onAuthStateChanged(auth, async u => {
   me = u;
   await ensureProfile(u);
   try { const sn = await getDoc(doc(db,'users',u.uid)); if (sn.data()?.banned){ alert('このアカウントは管理者により利用停止されています'); await auth.signOut(); return; } } catch(e){}
+  await loadPrefs();
+  showAnnounce(); loadIce();
   startApp();
 });
 async function ensureProfile(u){
@@ -490,6 +493,7 @@ function startApp(){
             {icon:'bell',label:'通知をオンにする',run:()=>setupPush(true)},
             {icon:'bell',label:'通知の状態を確認',run:notifyDiag},
             {icon:'belloff',label:isQuiet() ? '静かモードをオフにする' : '静かモードをオンにする（音を鳴らさない）',run:toggleQuiet},
+            {icon:'users',label:'ルームの並べ替え',run:sortModal},
             ...(isSiteAdmin() ? [{icon:'users',label:'管理パネル',run:adminPanel}] : []),
             {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
         h('div',{class:'side-actions'},
@@ -565,46 +569,89 @@ async function reportMsg(r, id, m){
     toast('通報しました');
   } catch(e){ console.error(e); toast('通報できませんでした'); }
 }
+async function logAdmin(action, target, note){ try { await addDoc(collection(db,'adminLog'), {ts:serverTimestamp(), by:me.uid, action, target:target || '', note:note || ''}); } catch(e){} }
+async function showAnnounce(){
+  try {
+    const sn = await getDoc(doc(db,'config','announce')), t = sn.exists() ? (sn.data().text || '') : '';
+    if (!t || localStorage.getItem('cs_ann') === t) return;
+    const bar = h('div',{style:'position:fixed;top:0;left:0;right:0;z-index:60;padding:8px 44px 8px 14px;background:#fff3cd;color:#664d03;font-size:14px;border-bottom:1px solid #e0cf8a'}, '📢 ' + t,
+      h('button',{'aria-label':'閉じる',style:'position:absolute;right:8px;top:4px;background:none;border:0;font-size:20px;color:inherit;cursor:pointer',onclick:()=>{ localStorage.setItem('cs_ann', t); bar.remove(); }}, '×'));
+    document.body.append(bar);
+  } catch(e){}
+}
 function adminPanel(){
   if (!isSiteAdmin()) return;
-  let tab = 'users';
+  let tab = 'home', q = '', sortBy = 'seen', showDone = false;
   const tabs = h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'});
+  const search = h('input',{class:'field',placeholder:'名前・メールで検索',style:'display:none',oninput:e=>{ q = e.target.value.trim().toLowerCase(); draw(); }});
   const list = h('div',{style:'display:grid;gap:2px;max-height:55vh;overflow:auto'});
-  const sb = (label, cls, fn) => h('button',{class:'btn '+cls,style:'padding:5px 12px;font-size:13px',onclick:fn}, label);
+  const sb = (l, cls, fn) => h('button',{class:'btn '+cls,style:'padding:5px 12px;font-size:13px',onclick:fn}, l);
   const row = (...c) => h('div',{style:'display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--line)'}, ...c);
   const small = t => h('div',{style:'font-size:12px;opacity:.7;word-break:break-all'}, t);
-  const when = t => { const v = ms(t); return v ? new Date(v).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'; };
-  const ban = (uid, on) => updateDoc(doc(db,'users',uid), {banned:on}).then(() => { toast(on ? '停止しました' : '解除しました'); setTimeout(draw, 600); }).catch(() => toast('変更できませんでした（ルールを確認してください）'));
+  const when = t => { const v = ms(t); return v ? new Date(v).toLocaleString('ja-JP',{year:'2-digit',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'; };
+  const ban = async (u, on) => {
+    let why = ''; if (on){ why = prompt('停止の理由（メモ）', ''); if (why === null) return; }
+    try { await updateDoc(doc(db,'users',u.uid), {banned:on, banReason:on ? why : ''}); logAdmin(on ? '停止' : '停止解除', u.name, why); toast(on ? '停止しました' : '解除しました'); setTimeout(draw, 600); }
+    catch(e){ toast('変更できませんでした（ルールを確認してください）'); }
+  };
+  const userDetail = async u => {
+    const body = h('div',{style:'display:grid;gap:6px;font-size:14px'}, h('div',{},'読み込み中…'));
+    modal(u.name || '不明', [body]);
+    try {
+      const rs = await getDocs(query(collection(db,'rooms'), where('members','array-contains',u.uid)));
+      const rp = await getDocs(collection(db,'reports'));
+      body.replaceChildren(h('div',{},'メール：' + (u.email || '—')), h('div',{},'登録：' + when(u.createdAt)), h('div',{},'最終ログイン：' + when(u.lastSeen)),
+        h('div',{},'状態：' + (u.banned ? '停止中（' + (u.banReason || '理由なし') + '）' : 'ふつう')), h('div',{},'通報された回数：' + rp.docs.filter(d => d.data().fromUid === u.uid).length + '回'),
+        h('div',{},'入っているルーム（' + rs.size + '）：' + (rs.docs.map(d => d.data().name || 'DM').join('、') || 'なし')));
+    } catch(e){ body.replaceChildren(h('div',{},'読み込めませんでした')); }
+  };
   const draw = async () => {
-    tabs.replaceChildren(...[['users','登録者'],['rooms','ルーム'],['reports','通報'],['usage','使用状況']].map(([k,l]) => h('button',{class:'btn '+(tab===k?'':'ghost'),style:'padding:5px 12px;font-size:13px',onclick:()=>{ tab=k; draw(); }}, l)));
+    tabs.replaceChildren(...[['home','概要'],['users','登録者'],['rooms','ルーム'],['reports','通報'],['log','記録'],['ann','お知らせ']].map(([k,l]) => h('button',{class:'btn '+(tab === k ? '' : 'ghost'),style:'padding:5px 12px;font-size:13px',onclick:()=>{ tab = k; draw(); }}, l)));
+    search.style.display = tab === 'users' ? '' : 'none';
     list.replaceChildren(h('div',{class:'empty'},'読み込み中…'));
     try {
       const rows = [];
-      if (tab === 'users'){
-        Object.values(users).sort((a,b) => ms(b.lastSeen) - ms(a.lastSeen)).forEach(u => rows.push(row(
-          h('div',{}, h('b',{}, u.name || '不明'), u.banned ? '（停止中）' : '', small((u.email||'') + '｜' + (isOnline(u.uid) ? 'オンライン' : '最終 ' + when(u.lastSeen)))),
-          u.uid === me.uid ? null : sb(u.banned ? '解除' : '停止', 'ghost', () => ban(u.uid, !u.banned)))));
+      if (tab === 'home'){
+        const us = Object.values(users), day = Date.now() - 864e5;
+        const [rs, rp] = await Promise.all([getDocs(collection(db,'rooms')), getDocs(collection(db,'reports'))]);
+        const stat = (l, v) => h('div',{style:'padding:10px;border:1px solid var(--line);border-radius:10px;text-align:center'}, h('div',{style:'font-size:22px;font-weight:700'}, String(v)), small(l));
+        rows.push(h('div',{style:'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px'}, stat('登録者', us.length), stat('いまオンライン', us.filter(u => isOnline(u.uid)).length), stat('今日の新規', us.filter(u => ms(u.createdAt) > day).length), stat('停止中', us.filter(u => u.banned).length), stat('ルーム', rs.size), stat('未対応の通報', rp.docs.filter(d => d.data().status !== 'done').length)),
+          h('p',{style:'font-size:13px'}, '通知の確認（10秒おき）だけで、1日に約17,300回の読み取りを使います。無料枠（1日5万回）の約35%です。数字は目安です。'),
+          h('p',{style:'font-size:13px'}, '正確な使用量は ', h('a',{href:'https://console.firebase.google.com/project/chat-app-44d95/firestore/usage',target:'_blank',rel:'noopener'}, 'Firebaseの使用状況'), ' で見られます。'));
+      } else if (tab === 'users'){
+        const key = {seen:u => -ms(u.lastSeen), name:u => u.name || '', made:u => -ms(u.createdAt)}[sortBy];
+        rows.push(h('div',{style:'display:flex;gap:6px;margin-bottom:6px'}, ...[['seen','最終ログイン'],['name','名前'],['made','登録順']].map(([k,l]) => sb(l, sortBy === k ? '' : 'ghost', ()=>{ sortBy = k; draw(); }))));
+        Object.values(users).filter(u => !q || ((u.name || '') + (u.email || '')).toLowerCase().includes(q)).sort((a,b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0).forEach(u => rows.push(row(
+          h('button',{style:'background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer',onclick:()=>userDetail(u)}, h('b',{}, u.name || '不明'), u.banned ? '（停止中）' : '', small((u.email || '') + '｜' + (isOnline(u.uid) ? 'オンライン' : '最終 ' + when(u.lastSeen)))),
+          u.uid === me.uid ? null : sb(u.banned ? '解除' : '停止', 'ghost', () => ban(u, !u.banned)))));
       } else if (tab === 'rooms'){
         const sn = await getDocs(collection(db,'rooms'));
-        sn.docs.forEach(d => { const x = d.data(); rows.push(row(
-          h('div',{}, h('b',{}, x.name || 'ルーム'), small('ID ' + d.id + '｜' + (x.members||[]).length + '人｜作成 ' + nameOf(x.createdBy))),
-          sb('削除', 'danger', async () => { await removeRoom({id:d.id, col:'rooms', ...x}); draw(); }))); });
+        sn.docs.sort((a,b) => ms(b.data().lastMsgTs) - ms(a.data().lastMsgTs)).forEach(d => { const x = d.data(); rows.push(row(
+          h('div',{}, h('b',{}, x.name || 'DM'), x.postAdminOnly ? '（書き込み禁止）' : '', small('ID ' + d.id + '｜' + (x.members || []).length + '人｜最終 ' + when(x.lastMsgTs) + '｜作成 ' + nameOf(x.createdBy))),
+          h('div',{style:'display:grid;gap:4px'},
+            x.name ? sb('名前変更','ghost',async()=>{ const n = prompt('新しいルーム名', x.name); if (!n || !n.trim()) return; await updateDoc(d.ref,{name:n.trim()}).then(()=>{ logAdmin('ルーム名変更', x.name, n.trim()); draw(); }).catch(()=>toast('変更できませんでした')); }) : null,
+            x.name ? sb(x.postAdminOnly ? '禁止を解除' : '書き込み禁止','ghost',()=>updateDoc(d.ref,{postAdminOnly:!x.postAdminOnly}).then(()=>{ logAdmin(x.postAdminOnly ? '書き込み禁止の解除' : '書き込み禁止', x.name); draw(); }).catch(()=>toast('変更できませんでした'))) : null,
+            sb('削除','danger',async()=>{ await removeRoom({id:d.id, col:'rooms', ...x}); logAdmin('ルーム削除', x.name || d.id); draw(); })))); });
       } else if (tab === 'reports'){
+        rows.push(h('div',{style:'margin-bottom:6px'}, sb(showDone ? '未対応を見る' : '対応済みを見る','ghost',()=>{ showDone = !showDone; draw(); })));
         const sn = await getDocs(collection(db,'reports'));
-        sn.docs.sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).forEach(d => { const x = d.data(); rows.push(row(
-          h('div',{}, h('b',{}, nameOf(x.fromUid) + ' の発言'), '（' + x.roomName + '）', small(x.text), small('通報者 ' + nameOf(x.byUid) + '｜' + when(x.ts))),
-          h('div',{style:'display:grid;gap:4px'}, sb('対応済み','ghost',() => deleteDoc(d.ref).then(draw)), sb('送信者を停止','danger',() => ban(x.fromUid, true))))); });
-        if (!rows.length) rows.push(h('div',{class:'empty'},'通報はありません'));
+        sn.docs.filter(d => (d.data().status === 'done') === showDone).sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).forEach(d => { const x = d.data(); rows.push(row(
+          h('div',{}, h('b',{}, nameOf(x.fromUid) + ' の発言'), '（' + x.roomName + '）', small(x.text), small('通報者 ' + nameOf(x.byUid) + '｜' + when(x.ts) + (x.note ? '｜対応メモ：' + x.note : ''))),
+          h('div',{style:'display:grid;gap:4px'}, x.status === 'done' ? sb('未対応に戻す','ghost',()=>updateDoc(d.ref,{status:'open'}).then(draw)) : sb('対応済み','ghost',()=>{ const n = prompt('対応メモ（空でもOK）', ''); if (n === null) return; updateDoc(d.ref,{status:'done', note:n, doneAt:serverTimestamp()}).then(()=>{ logAdmin('通報を対応済み', nameOf(x.fromUid), n); draw(); }); }), sb('送信者を停止','danger',() => ban({uid:x.fromUid, name:nameOf(x.fromUid)}, true))))); });
+        if (rows.length < 2) rows.push(h('div',{class:'empty'},'ありません'));
+      } else if (tab === 'log'){
+        const sn = await getDocs(collection(db,'adminLog'));
+        sn.docs.sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).slice(0,100).forEach(d => { const x = d.data(); rows.push(row(h('div',{}, h('b',{}, x.action), small(when(x.ts) + '｜' + nameOf(x.by) + '｜' + (x.target || '') + (x.note ? '｜' + x.note : ''))))); });
+        if (!rows.length) rows.push(h('div',{class:'empty'},'まだ記録はありません'));
       } else {
-        const rs = await getDocs(collection(db,'rooms'));
-        rows.push(h('p',{}, '登録者 ' + Object.keys(users).length + '人／ルーム ' + rs.size + '個'),
-          h('p',{}, '通知の確認（7秒おき）だけで、1日に約24,700回の読み取りを使います。無料枠（1日5万回）の約5割です。ここの数字は目安です。'),
-          h('p',{}, '正確な使用量は ', h('a',{href:'https://console.firebase.google.com/project/chat-app-44d95/firestore/usage',target:'_blank',rel:'noopener'}, 'Firebaseの使用状況'), ' で見られます。'));
+        const sn = await getDoc(doc(db,'config','announce')), ta = h('textarea',{class:'field',rows:'4',placeholder:'全員の画面の上に出す、お知らせ'}); ta.value = sn.exists() ? (sn.data().text || '') : '';
+        const save = t => setDoc(doc(db,'config','announce'), {text:t, updatedAt:serverTimestamp()}).then(()=>{ logAdmin('お知らせ', '', t); toast(t ? 'お知らせを出しました' : 'お知らせを消しました'); }).catch(()=>toast('保存できませんでした'));
+        rows.push(ta, h('div',{style:'display:flex;gap:8px;margin-top:8px'}, sb('出す','',()=>save(ta.value.trim())), sb('消す','ghost',()=>{ ta.value = ''; save(''); })), small('アプリを開いたときに、画面の上に出ます。×で閉じた人には、同じ内容は、もう出ません。'));
       }
-      list.replaceChildren(...rows);
+      list.replaceChildren(...rows.filter(Boolean));
     } catch(e){ console.error(e); list.replaceChildren(h('div',{class:'empty'},'読み込めませんでした（ルールを確認してください）')); }
   };
-  modal('管理パネル', [tabs, list]); draw();
+  modal('管理パネル', [tabs, search, list]); draw();
 }
 
 /* ---------- v3.6: forward / schedule / mini games ---------- */
@@ -710,11 +757,98 @@ function gameView(id, m){
   return box;
 }
 
+/* ---------- v3.7: prefs / memo / rename / readers / draw / sort ---------- */
+let prefs = {};
+const prefsRef = () => doc(db,'users',me.uid,'private','prefs');
+async function loadPrefs(){ try { const sn = await getDoc(prefsRef()); prefs = sn.exists() ? sn.data() : {}; } catch(e){ prefs = {}; } }
+function setPrefs(patch){ prefs = {...prefs, ...patch}; setDoc(prefsRef(), patch, {merge:true}).catch(()=>{}); renderRooms(); }
+const hidingRead = () => !!(prefs.hideRead || {})[cur];
+function toggleHideRead(){
+  const v = !hidingRead(), id = cur;
+  prefs.hideRead = {...(prefs.hideRead || {}), [id]: v};
+  setDoc(prefsRef(), {hideRead:{[id]:v}}, {merge:true}).catch(()=>{});
+  document.body.classList.toggle('hide-read', v);
+  toast(v ? 'このルームでは既読を見せません（相手の既読も見えません）' : '既読を見せるようにしました');
+}
+const lastT = r => ms(r.lastMsgTs) || ms(r.createdAt);
+const isUnreadRoom = r => r.id !== cur && r.lastUid && r.lastUid !== me.uid && ms(r.lastMsgTs) > (readMap[r.id] || 0);
+function roomSorter(){
+  const pin = prefs.pinned || [], mode = prefs.sort || 'recent', ord = prefs.order || [];
+  return (a,b) => {
+    const pa = pin.includes(a.id), pb = pin.includes(b.id); if (pa !== pb) return pa ? -1 : 1;
+    if (mode === 'name') return roomTitle(a).localeCompare(roomTitle(b), 'ja');
+    if (mode === 'unread'){ const ua = isUnreadRoom(a), ub = isUnreadRoom(b); if (ua !== ub) return ua ? -1 : 1; }
+    if (mode === 'manual'){ const ia = ord.indexOf(a.id), ib = ord.indexOf(b.id); if (ia !== ib) return (ia < 0 ? 9999 : ia) - (ib < 0 ? 9999 : ib); }
+    return lastT(b) - lastT(a);
+  };
+}
+function sortModal(){
+  const box = h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'}), list = h('div',{style:'display:grid;gap:2px;max-height:45vh;overflow:auto;margin-top:8px'});
+  const mini = (l, fn) => h('button',{class:'btn ghost',style:'padding:2px 9px;font-size:12px',onclick:fn}, l);
+  const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; const ids = arr.map(r => r.id); [ids[i], ids[j]] = [ids[j], ids[i]]; setPrefs({sort:'manual', order:ids}); draw(); };
+  const draw = () => {
+    box.replaceChildren(...[['recent','新しい順'],['unread','未読を上に'],['name','名前順'],['manual','自分で並べる']].map(([k,l]) => h('button',{class:'btn '+((prefs.sort || 'recent') === k ? '' : 'ghost'),style:'padding:5px 12px;font-size:13px',onclick:()=>{ setPrefs({sort:k}); draw(); }}, l)));
+    const arr = Object.values(rooms).sort(roomSorter()), pin = prefs.pinned || [];
+    list.replaceChildren(...arr.map((r,i) => h('div',{style:'display:flex;gap:6px;align-items:center;justify-content:space-between;padding:4px 2px;border-bottom:1px solid var(--line)'},
+      h('span',{}, (pin.includes(r.id) ? '📌 ' : '') + roomTitle(r)),
+      h('span',{style:'display:flex;gap:4px'}, mini(pin.includes(r.id) ? '固定解除' : '固定', ()=>{ setPrefs({pinned: pin.includes(r.id) ? pin.filter(x => x !== r.id) : [...pin, r.id]}); draw(); }), mini('↑', ()=>move(arr,i,-1)), mini('↓', ()=>move(arr,i,1))))));
+  };
+  modal('ルームの並べ替え', [box, list]); draw();
+}
+const memoCache = {};
+async function drawMemoBar(id){
+  const bar = $('#memoBar'); if (!bar) return;
+  if (memoCache[id] === undefined){ try { const sn = await getDoc(doc(db,'users',me.uid,'memos',id)); memoCache[id] = sn.exists() ? (sn.data().text || '') : ''; } catch(e){ memoCache[id] = ''; } }
+  if (cur !== id) return;
+  const t = memoCache[id];
+  bar.replaceChildren(...(t ? [h('button',{style:'display:block;width:100%;text-align:left;padding:6px 14px;background:var(--hover);border:0;border-bottom:1px solid var(--line);font-size:13px;color:inherit;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis',onclick:()=>memoModal(rooms[id])}, '📝 ' + t.replace(/\n/g,' '))] : []));
+}
+function memoModal(r){
+  if (!r) return;
+  const ta = h('textarea',{class:'field',rows:'8',placeholder:'このルームのメモ（自分だけに見えます）'}); ta.value = memoCache[r.id] || '';
+  const close = modal('メモ（' + roomTitle(r) + '）', [ta, h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:async()=>{
+    const text = ta.value.trim(); close();
+    try { const ref = doc(db,'users',me.uid,'memos',r.id); if (text) await setDoc(ref, {text, updatedAt:serverTimestamp()}); else await deleteDoc(ref); memoCache[r.id] = text; drawMemoBar(r.id); toast('メモを保存しました'); } catch(e){ toast('保存できませんでした'); }
+  }}, '保存'))]);
+}
+function renameRoom(r){
+  const inp = h('input',{class:'field',value:r.name || '',maxlength:'40'});
+  const close = modal('ルーム名を変更', [inp, h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:async()=>{
+    const name = inp.value.trim(); close(); if (!name || name === r.name) return;
+    try { await updateDoc(roomRef(r), {name}); await sysMsg(r, nameOf(me.uid) + 'さんがルーム名を「' + name + '」に変更しました'); toast('ルーム名を変更しました'); } catch(e){ toast('変更できませんでした'); }
+  }}, '保存'))]);
+}
+function readersModal(r, m){
+  const read = (m.readBy || []).filter(u => u !== m.author), unread = (r.members || []).filter(u => u !== m.author && !read.includes(u));
+  const sec = (t, a) => h('div',{style:'margin-bottom:10px'}, h('b',{}, t + '（' + a.length + '人）'), h('div',{style:'font-size:14px;margin-top:4px'}, a.length ? a.map(nameOf).join('、') : 'いません'));
+  modal('既読', [sec('読んだ人', read), sec('まだ読んでいない人', unread)]);
+}
+function reactorsModal(m){
+  modal('リアクションした人', Object.entries(m.reactions || {}).filter(([,l]) => l && l.length).map(([e,l]) => h('div',{style:'padding:6px 0;border-bottom:1px solid var(--line)'}, h('span',{style:'font-size:20px;margin-right:8px'}, e), l.map(nameOf).join('、'))));
+}
+function drawModal(){
+  const W = 600, H = 420, cv = h('canvas',{width:String(W),height:String(H),style:'width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;touch-action:none'});
+  const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,W,H); cx.lineCap = 'round'; cx.lineJoin = 'round';
+  let color = '#111', size = 5, eraser = false, drawing = false, last = null; const undo = [];
+  const snap = () => { undo.push(cx.getImageData(0,0,W,H)); if (undo.length > 20) undo.shift(); };
+  const pos = e => { const b = cv.getBoundingClientRect(); return {x:(e.clientX - b.left)*W/b.width, y:(e.clientY - b.top)*H/b.height}; };
+  const line = (a,b) => { cx.strokeStyle = eraser ? '#fff' : color; cx.lineWidth = eraser ? size*3 : size; cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y); cx.stroke(); };
+  cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); snap(); drawing = true; last = pos(e); line(last,last); };
+  cv.onpointermove = e => { if (!drawing) return; const p = pos(e); line(last,p); last = p; };
+  cv.onpointerup = cv.onpointercancel = () => { drawing = false; };
+  const colors = ['#111111','#e53935','#fb8c00','#fdd835','#43a047','#1e88e5','#8e24aa'];
+  const cb = colors.map(c => h('button',{'aria-label':'色',style:'width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:'+c,onclick:()=>{ color = c; eraser = false; }}));
+  const tb = (l, fn) => h('button',{class:'btn ghost',style:'padding:4px 10px;font-size:13px',onclick:fn}, l);
+  const close = modal('お絵描き', [cv, h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px'}, ...cb),
+    h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px'}, tb('細',()=>{ size = 2; eraser = false; }), tb('中',()=>{ size = 5; eraser = false; }), tb('太',()=>{ size = 12; eraser = false; }), tb('消しゴム',()=>{ eraser = true; }), tb('戻す',()=>{ const x = undo.pop(); if (x) cx.putImageData(x,0,0); }), tb('全部消す',()=>{ snap(); cx.fillStyle = '#fff'; cx.fillRect(0,0,W,H); })),
+    h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:()=>{ cv.toBlob(b => { close(); sendImage(new File([b],'drawing.png',{type:'image/png'})); }, 'image/png'); }}, '送信'))]);
+}
+
 /* ---------- room list ---------- */
 function renderRooms(){
   const list = $('#roomList'); if (!list) return;
   const arr = Object.values(rooms).filter(r => listFilter==='all' || (listFilter==='dm') === isDm(r))
-    .sort((a,b)=> (ms(b.lastMsgTs)||ms(b.createdAt)) - (ms(a.lastMsgTs)||ms(a.createdAt)));
+    .sort(roomSorter());
   list.replaceChildren();
   if (!arr.length){ list.append(h('div',{class:'empty'},'ここにはまだ何もありません。',h('br'),'「ルーム」から作成・参加、または「DM」で友だちに話しかけましょう。')); return; }
   for (const r of arr){
@@ -739,10 +873,12 @@ function openRoom(id){
   $('#main').replaceChildren(
     h('div',{class:'chat-head',id:'chatHead'}),
     h('div',{id:'pinBar'}),
+    h('div',{id:'memoBar'}),
     h('div',{class:'msgs',id:'msgs'}),
     h('div',{class:'hint',id:'chatEmpty',hidden:true},'まだメッセージはありません。最初の一言を送ってみましょう。'),
     composer());
   renderHeader(); renderRooms();
+  document.body.classList.toggle('hide-read', hidingRead()); drawMemoBar(id);
   subscribeMessages(id);
 }
 function closeRoom(){
@@ -763,8 +899,7 @@ function renderHeader(){
     h('button',{class:'icon-btn back','aria-label':'一覧に戻る',onclick:()=>document.body.classList.remove('in-chat')}, ico('back')),
     avatar(other || r.createdBy || r.id, roomTitle(r), true, other && isOnline(other)),
     h('div',{class:'titles'}, h('div',{class:'t'},roomTitle(r)), h('div',{class:cls},sub)),
-    h('button',{class:'icon-btn','aria-label':isDm(r) ? '電話をかける' : 'グループ通話',onclick:() => isDm(r) ? startCall(false) : groupCallAction(false)}, ico('phone')),
-    h('button',{class:'icon-btn','aria-label':'ビデオ通話',onclick:() => isDm(r) ? startCall(true) : groupCallAction(true)}, ico('video')),
+    h('button',{class:'icon-btn','aria-label':'通話',onclick:e => popup(e.currentTarget,[{icon:'phone',label:'音声通話',run:() => isDm(r) ? startCall(false) : groupCallAction(false)},{icon:'video',label:'ビデオ通話',run:() => isDm(r) ? startCall(true) : groupCallAction(true)}])}, ico('phone')),
     h('button',{class:'icon-btn','aria-label':'検索',onclick:searchModal}, ico('search')),
     h('button',{class:'icon-btn','aria-label':'ルームのメニュー',onclick:e=>roomMenu(e.currentTarget)}, ico('more')));
   const pb = $('#pinBar');
@@ -784,10 +919,13 @@ function jumpTo(id){
 function roomMenu(anchor){
   const r = rooms[cur]; if (!r) return;
   const items = [];
+  items.push({icon:'user',label:hidingRead() ? '既読を見せる' : 'このルームでは既読を見せない',run:toggleHideRead});
+  items.push({icon:'memo',label:'このルームのメモ',run:()=>memoModal(r)});
   if (!isDm(r)){
     items.push({icon:'link',label:'共有リンクをコピー',run:()=>copy(location.origin+location.pathname+'?room='+r.id,'共有リンクをコピーしました')});
     items.push({icon:'copy',label:'ルームIDをコピー（'+r.id+'）',run:()=>copy(r.id,'ルームIDをコピーしました')});
     items.push({icon:'users',label:'メンバーを見る',run:()=>membersModal(r)});
+    if (isAdmin(r)) items.push({icon:'edit',label:'ルーム名を変更',run:()=>renameRoom(r)});
     if (r.createdBy !== me.uid) items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
     if (isAdmin(r)) items.push({icon:'users',label:'メンバーを招待',run:()=>inviteModal(r)});
     if (isAdmin(r)) items.push({icon:'image',label:r.imageAdminOnly ? '画像送信を全員に許可する' : '画像送信を管理者だけにする',run:()=>updateDoc(roomRef(r),{imageAdminOnly:!r.imageAdminOnly}).then(()=>toast(r.imageAdminOnly ? '画像送信を全員に許可しました' : '画像送信を管理者だけにしました')).catch(()=>toast('変更できませんでした'))});
@@ -903,6 +1041,7 @@ async function flushRead(){
   const r = rooms[cur];
   if (!inFocus() || !r || !pendingRead.size) return;
   const ids = [...pendingRead]; pendingRead.clear();
+  if (hidingRead()) return;
   try {
     const b = writeBatch(db);
     ids.forEach(mid => b.update(doc(db, r.col, r.id, 'messages', mid), {readBy: arrayUnion(me.uid)}));
@@ -939,7 +1078,7 @@ function msgEl(id, m){
   if (!m.deleted){
     const rc = h('div',{class:'reacts'});
     Object.entries(m.reactions || {}).forEach(([e, list]) => {
-      if (list && list.length) rc.append(h('button',{class:'chip'+(list.includes(me.uid)?' on':''),'aria-label':'リアクション '+e,onclick:()=>react(id,e,list.includes(me.uid))}, e+' '+list.length));
+      if (list && list.length) rc.append(h('button',{class:'chip'+(list.includes(me.uid)?' on':''),'aria-label':'リアクション '+e,title:list.map(nameOf).join('、'),onclick:()=>react(id,e,list.includes(me.uid))}, e+' '+list.length));
     });
     if (rc.children.length) el.append(rc);
     const act = (icon, label, fn, cls) => h('button',{class:cls||'','aria-label':label,title:label,onclick:ev=>{ ev.stopPropagation(); el.classList.remove('open'); fn(); }}, ico(icon,17));
@@ -950,13 +1089,14 @@ function msgEl(id, m){
       pic ? act('search','拡大',()=>openImage(r, id, m)) : null,
       mine && !m.stamp && !m.hasImage && !isPoll && !m.game ? act('edit','編集',()=>editMsg(id,m)) : null,
       r && !isDm(r) ? act('pin', r.pinnedMsgId===id ? 'ピン解除' : 'ピン留め',()=>togglePin(id,m)) : null,
+      Object.values(m.reactions||{}).some(l => l && l.length) ? act('users','リアクションした人',()=>reactorsModal(m)) : null,
       !m.deleted && !m.hasImage && !isPoll && !m.game && m.text ? act('send','転送',()=>forwardMsg(m)) : null,
       !mine && r ? act('x','通報',()=>reportMsg(r,id,m)) : null,
       mine ? act('trash','削除',()=>deleteMsg(id),'del') : null);
     el.append(bar);
   }
   const others = (m.readBy||[]).filter(u => u !== m.author).length;
-  el.append(h('div',{class:'info'}, pic ? h('button',{class:'imore','aria-label':'メニューを開く',onclick:toggle}, ico('more',16)) : null, fmtTime(m.ts), m.edited && !m.deleted ? '編集済み' : null, mine && others && !m.deleted ? (r && isDm(r) ? '既読' : '既読 '+others) : null));
+  el.append(h('div',{class:'info'}, pic ? h('button',{class:'imore','aria-label':'メニューを開く',onclick:toggle}, ico('more',16)) : null, fmtTime(m.ts), m.edited && !m.deleted ? '編集済み' : null, mine && others && !m.deleted ? h('span',{class:'rd'}, r && isDm(r) ? '既読' : h('button',{style:'background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer',onclick:ev=>{ ev.stopPropagation(); readersModal(r, m); }}, '既読 '+others)) : null));
   return el;
 }
 function withMentions(parts, r){
@@ -1078,6 +1218,7 @@ function composer(){
     sug.hidden = false;
   };
   const pollBtn = h('button',{class:'icon-btn','aria-label':'投票を作る',onclick:pollModal}, ico('poll',24));
+  const appsBtn = h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e => popup(e.currentTarget,[...(isGroupRoom ? [{icon:'poll',label:'投票',run:pollModal}] : []),{icon:'game',label:'ミニゲーム',run:gameModal},{icon:'clock',label:'時間指定',run:scheduleModal},{icon:'brush',label:'お絵描き',run:drawModal},{icon:'memo',label:'メモ',run:() => memoModal(rooms[cur])}])}, ico('grid9',24));
   const gameBtn = h('button',{class:'icon-btn','aria-label':'ミニゲーム',onclick:gameModal}, ico('game',24));
   const schedBtn = h('button',{class:'icon-btn','aria-label':'時間指定メッセージ',onclick:scheduleModal}, ico('clock',24));
   const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,140) + 'px'; sendBtn.disabled = !ta.value.trim(); };
@@ -1091,7 +1232,7 @@ function composer(){
   sendBtn.addEventListener('click', submit);
   const rb = h('div',{class:'replybar',id:'replyBar',hidden:true});
   const isGroupRoom = rooms[cur] && !isDm(rooms[cur]);
-  return h('div',{class:'composer'}, panel, sug, rb, h('div',{class:'crow'}, stampBtn, imgBtn, isGroupRoom ? pollBtn : null, gameBtn, schedBtn, fileIn, ta, sendBtn));
+  return h('div',{class:'composer'}, panel, sug, rb, h('div',{class:'crow'}, stampBtn, imgBtn, appsBtn, fileIn, ta, sendBtn));
 }
 async function doSend(kind, text){
   text = String(text).trim(); const r = rooms[cur]; if (!text || !r) return;
@@ -1442,7 +1583,17 @@ function makeVid(stream){
 const stopStream = st => { if (st) st.getTracks().forEach(t => { t.onended = null; t.stop(); }); };
 
 /* ---------- 通話（1対1の音声通話） ---------- */
-const ICE = {iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302']}]};
+let ICE = {iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302']}]};
+const TURN_URL = '';  // ← CloudflareのWorkerのURLを、ここに貼ります（空のままなら、今までどおり）
+let iceTimer;
+async function loadIce(){
+  if (!TURN_URL) return;
+  try {
+    const j = await (await fetch(TURN_URL)).json(), ic = [].concat(j.iceServers || []);
+    if (ic.length) ICE = {iceServers:[ICE.iceServers[0], ...ic]};
+  } catch(e){ console.warn('TURN取得に失敗', e); }
+  if (!iceTimer) iceTimer = setInterval(loadIce, 6*3600e3);
+}
 let call = null, incoming = null, ringCtx = null, ringTimer = null;
 const handledCalls = new Set();
 const fmtDur = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
