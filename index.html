@@ -235,6 +235,17 @@ input,textarea{font:inherit;color:inherit}
 .callov .gpv{width:152px;aspect-ratio:4/3;border-radius:10px;background:#000;object-fit:cover;cursor:zoom-in}
 .gl .gp.cam{width:156px}
 body.hide-read .rd{display:none}
+
+/* ChatSpace 4.0 launcher */
+.launchers{padding:4px 14px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.launcher-title{grid-column:1/-1;color:var(--sub);font-size:11px;font-weight:700;letter-spacing:.08em;padding:0 2px 2px}
+.launch-btn{display:flex;align-items:center;gap:8px;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:13px;font-weight:700;text-align:left;transition:background .15s,border-color .15s}
+.launch-btn:hover{background:var(--hover);border-color:var(--accent)}
+.launch-btn .ico{color:var(--accent)}
+.launch-btn span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.launch-btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.launch-btn.primary .ico{color:inherit}
+@media(max-width:640px){.launchers{padding:3px 10px 10px;gap:6px}.launch-btn{padding:8px;font-size:12px}}
 </style>
 </head>
 <body>
@@ -245,7 +256,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = '3.8 (2026-11-25)';
+const VERSION = '4.0 (2026-11-28)';
 const firebaseConfig = {
   apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
   authDomain: "chat-app-44d95.firebaseapp.com",
@@ -496,9 +507,15 @@ function startApp(){
             {icon:'users',label:'ルームの並べ替え',run:sortModal},
             ...(isSiteAdmin() ? [{icon:'users',label:'管理パネル',run:adminPanel}] : []),
             {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
-        h('div',{class:'side-actions'},
-          h('button',{class:'btn',onclick:roomModal},ico('users',18),'ルーム'),
-          h('button',{class:'btn ghost',onclick:dmModal},ico('msg',18),'DM')),
+        h('div',{class:'launchers'},
+          h('div',{class:'launcher-title'},'CHATSPACE 4.0'),
+          h('button',{class:'launch-btn primary',onclick:()=>{listFilter='all';drawFilters();renderRooms();}},ico('msg',17),h('span',{},'チャット')),
+          h('button',{class:'launch-btn',onclick:()=>{listFilter='dm';drawFilters();renderRooms();}},ico('users',17),h('span',{},'DM・フレンド')),
+          h('button',{class:'launch-btn',onclick:roomModal},ico('plus',17),h('span',{},'ルームを作る')),
+          h('button',{class:'launch-btn',onclick:dmModal},ico('user',17),h('span',{},'友だちを探す')),
+          h('button',{class:'launch-btn',onclick:()=>cur?gameModal():toast('ゲームを遊ぶには、先にチャットルームを開いてください')},ico('game',17),h('span',{},'ゲーム')),
+          h('button',{class:'launch-btn',onclick:()=>cur?memoModal(rooms[cur]):toast('個人メモを使うには、先にチャットルームを開いてください')},ico('memo',17),h('span',{},'メモ')),
+          h('button',{class:'launch-btn',onclick:()=>cur?searchModal():toast('検索するには、先にチャットルームを開いてください')},ico('search',17),h('span',{},'チャット検索'))),
         h('div',{id:'notifyBanner'}),
         h('div',{class:'filters',id:'filters'}),
         h('div',{class:'room-list',id:'roomList'}),
