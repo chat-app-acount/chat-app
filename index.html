@@ -164,9 +164,14 @@ input,textarea{font:inherit;color:inherit}
 .bar{flex-wrap:wrap;max-width:280px;border-radius:18px}
 .msg.mine .bar{justify-content:flex-end}
 .bar .sp{width:1px;background:var(--line);margin:4px 3px}
-.filters{display:flex;gap:4px;padding:0 14px 8px}
-.filters button{padding:3px 12px;border-radius:999px;font-size:13px;color:var(--sub)}
-.filters button.on{background:var(--hover);color:var(--ink);font-weight:700}
+.filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:6px;padding:2px 12px 10px}
+.filters button{min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 7px;border:1px solid var(--line);border-radius:11px;background:var(--bg);font-size:12px;color:var(--sub);white-space:nowrap;transition:background .15s,border-color .15s}
+.filters button .ico{width:15px;height:15px;flex:none}
+.filters button .fc{font-weight:700;font-variant-numeric:tabular-nums}
+.filters button.on{background:var(--hover);border-color:var(--accent);color:var(--ink);font-weight:700}
+.filters button.explore{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700;padding-inline:11px}
+.filters button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:380px){.filters{grid-template-columns:repeat(3,minmax(0,1fr));}.filters button.explore{grid-column:1/-1}}
 .ver{font-size:11px;color:var(--sub);text-align:center;padding:6px 0 10px}
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
 .swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
@@ -538,7 +543,33 @@ function onVisible(){
 }
 function drawFilters(){
   const f = $('#filters'); if (!f) return;
-  f.replaceChildren(...[['all','すべて'],['group','ルーム'],['dm','DM']].map(([k,l]) => h('button',{class:listFilter===k?'on':'',onclick:()=>{ listFilter=k; drawFilters(); renderRooms(); }}, l)));
+  const arr = Object.values(rooms);
+  const unread = r => !!(r.id !== cur && r.lastUid && r.lastUid !== me?.uid && ms(r.lastMsgTs) > (readMap[r.id] || 0));
+  const counts = {
+    all: arr.filter(unread).length,
+    group: arr.filter(r=>!isDm(r) && unread(r)).length,
+    dm: arr.filter(r=>isDm(r) && unread(r)).length
+  };
+  const make = (key,label,ic) => h('button',{type:'button',class:(listFilter===key?'on':''),title:label+'を表示', 'aria-pressed':String(listFilter===key),onclick:()=>{listFilter=key;drawFilters();renderRooms();}},
+    ico(ic,15),h('span',{},label),h('span',{class:'fc'},String(counts[key])));
+  f.replaceChildren(
+    make('all','すべて','msg'),
+    make('group','ルーム','users'),
+    make('dm','DM','msg'),
+    h('button',{type:'button',class:'explore',onclick:discoverModal,title:'友だちやルームを探す'},ico('search',15),h('span',{},'新しく探す'))
+  );
+}
+function discoverModal(){
+  const item=(ic,title,desc,run)=>h('button',{class:'urow',style:'width:100%;text-align:left;padding:12px;border:1px solid var(--line);border-radius:12px;margin:5px 0;display:flex;align-items:center;gap:12px',onclick:()=>{close();run();}},
+    h('span',{style:'width:38px;height:38px;border-radius:11px;background:var(--hover);display:grid;place-items:center;color:var(--accent);flex:none'},ico(ic,20)),
+    h('span',{style:'display:grid;gap:3px;min-width:0'},h('b',{},title),h('small',{style:'color:var(--sub);font-size:12px'},desc))
+  );
+  const close=modal('新しく探す',[
+    h('div',{style:'font-size:13px;color:var(--sub);margin-bottom:6px'},'友だちやルームを見つけて、会話を始めましょう。'),
+    item('user','友だちを探す','名前で検索してDMを始める',dmModal),
+    item('edit','ルームを作る','新しいグループチャットを作成',roomModal),
+    item('link','ルームに参加する','ルームIDまたは共有リンクで参加',()=>{roomModal();setTimeout(()=>{$('.tabs button')[1]?.click();},80);})
+  ]);
 }
 
 /* ---------- listeners ---------- */
@@ -1445,8 +1476,8 @@ function inviteModal(r){
     } catch(e){ console.error(e); toast('招待できませんでした'); }
   }},'招待する')]);
 }
-function roomModal(){
-  let mode = 'create', close;
+function roomModal(initialMode='create'){
+  let mode = initialMode, close;
   const body = h('div',{style:'display:grid;gap:12px'});
   const draw = () => {
     body.replaceChildren();
