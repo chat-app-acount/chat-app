@@ -1111,7 +1111,8 @@ function dmActivitySummary(){
   const p=dmActivity.presence;
   if(p?.share===true){
     const labels={online:'オンライン',away:'離席中',busy:'取り込み中',offline:'オフライン'};
-    parts.push(labels[p.status]||'状態不明');
+    const stale=p.updatedAt && Date.now()-ms(p.updatedAt)>150000;
+    parts.push(stale && p.status==='online' ? '離席中' : (labels[p.status]||'状態不明'));
   }
   const d=dmActivity.devices;
   if(d?.share===true) parts.push(d.device==='mobile'?'スマホ':d.device==='pc'?'PC':'端末不明');
@@ -1152,6 +1153,7 @@ function renderRooms(){
 function openRoom(id){
   if (!rooms[id]) return;
   if (cur === id){ document.body.classList.add('in-chat'); return; }
+  if (cur && rooms[cur] && isDm(rooms[cur])) publishDmActivity('away',cur);
   unsubMsgs?.(); pendingRead.clear(); replyTo = null;
   cur = id; readMap[id] = Date.now(); saveRead();
   document.body.classList.add('in-chat');
@@ -1168,6 +1170,7 @@ function openRoom(id){
   if (isDm(rooms[id])) { watchDmActivity(rooms[id]); publishDmActivity(document.hidden?'away':'online',id); } else stopDmActivityWatch();
 }
 function closeRoom(){
+  if (cur && rooms[cur] && isDm(rooms[cur])) publishDmActivity('away',cur);
   unsubMsgs?.(); unsubMsgs = null; stopDmActivityWatch(); cur = null; pendingRead.clear(); replyTo = null;
   document.body.classList.remove('in-chat');
   $('#main')?.replaceChildren(welcome());
