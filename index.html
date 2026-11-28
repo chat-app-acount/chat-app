@@ -553,9 +553,9 @@ function drawFilters(){
   const make = (key,label,ic) => h('button',{type:'button',class:(listFilter===key?'on':''),title:label+'を表示', 'aria-pressed':String(listFilter===key),onclick:()=>{listFilter=key;drawFilters();renderRooms();}},
     ico(ic,15),h('span',{},label),h('span',{class:'fc'},String(counts[key])));
   f.replaceChildren(
-    make('all','すべて','inbox'),
+    make('all','すべて','msg'),
     make('group','ルーム','users'),
-    make('dm','DM','message-circle'),
+    make('dm','DM','msg'),
     h('button',{type:'button',class:'explore',onclick:discoverModal,title:'友だちやルームを探す'},ico('search',15),h('span',{},'新しく探す'))
   );
 }
@@ -566,9 +566,9 @@ function discoverModal(){
   );
   const close=modal('新しく探す',[
     h('div',{style:'font-size:13px;color:var(--sub);margin-bottom:6px'},'友だちやルームを見つけて、会話を始めましょう。'),
-    item('user-plus','友だちを探す','名前で検索してDMを始める',dmModal),
-    item('plus-circle','ルームを作る','新しいグループチャットを作成',roomModal),
-    item('log-in','ルームに参加する','ルームIDまたは共有リンクで参加',()=>{roomModal();setTimeout(()=>{$('.tabs button')[1]?.click();},80);})
+    item('user','友だちを探す','名前で検索してDMを始める',dmModal),
+    item('edit','ルームを作る','新しいグループチャットを作成',roomModal),
+    item('link','ルームに参加する','ルームIDまたは共有リンクで参加',()=>{roomModal();setTimeout(()=>{$('.tabs button')[1]?.click();},80);})
   ]);
 }
 
@@ -1476,8 +1476,8 @@ function inviteModal(r){
     } catch(e){ console.error(e); toast('招待できませんでした'); }
   }},'招待する')]);
 }
-function roomModal(){
-  let mode = 'create', close;
+function roomModal(initialMode='create'){
+  let mode = initialMode, close;
   const body = h('div',{style:'display:grid;gap:12px'});
   const draw = () => {
     body.replaceChildren();
