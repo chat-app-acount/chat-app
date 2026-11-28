@@ -1017,10 +1017,10 @@ function drawModal(){
 const activityTypes = ['presence','devices','activities','lastSeen'];
 const activityRef = (r, type, uid=me.uid) => doc(db,'dms',r.id,type,uid);
 const activityOptions = () => ({
-  status: prefs.activityStatus === true,
-  device: prefs.activityDevice === true,
-  label: prefs.activityLabel === true,
-  lastSeen: prefs.activityLastSeen === true
+  status: prefs.activityStatus !== false,
+  device: prefs.activityDevice !== false,
+  label: prefs.activityLabel !== false,
+  lastSeen: prefs.activityLastSeen !== false
 });
 function currentActivityDevice(){ return isMobile ? 'mobile' : 'pc'; }
 function savePrivateUsage(){
@@ -1052,7 +1052,8 @@ async function publishDmActivity(statusOverride, onlyRoomId=null){
     const jobs=[];
     jobs.push(setDoc(activityRef(r,'presence'),{status:nowStatus,share:opts.status,updatedAt:serverTimestamp()},{merge:true}));
     jobs.push(setDoc(activityRef(r,'devices'),{device:currentActivityDevice(),share:opts.device,updatedAt:serverTimestamp()},{merge:true}));
-    jobs.push(setDoc(activityRef(r,'activities'),{label:(prefs.activityText||'').slice(0,40),share:opts.label,updatedAt:serverTimestamp()},{merge:true}));
+    const autoLabel = document.hidden ? '離席中' : (document.hasFocus() ? (cur===r.id ? 'DMを利用中' : 'ChatSpaceを利用中') : 'バックグラウンド');
+    jobs.push(setDoc(activityRef(r,'activities'),{label:autoLabel,share:opts.label,updatedAt:serverTimestamp()},{merge:true}));
     jobs.push(setDoc(activityRef(r,'lastSeen'),{at:serverTimestamp(),share:opts.lastSeen},{merge:true}));
     await Promise.all(jobs).catch(e=>console.warn('activity publish',e));
   }));
@@ -1080,26 +1081,23 @@ function activitySettingsModal(){
     sw.onclick=()=>{ const next=sw.classList.toggle('on'); sw.setAttribute('aria-pressed',String(next)); draft[key]=next; };
     return h('div',{class:'activity-setting'},h('div',{},h('b',{},title),h('small',{},desc)),sw);
   };
-  const label=h('input',{class:'field',maxlength:'40',placeholder:'例：勉強中・ゲーム中・休憩中',value:prefs.activityText||''});
   const info=h('div',{class:'activity-intro'},'共有先は、DMを開始した相手だけです。Webサイトやアプリの利用状況を自動で検出することはありません。利用時間の記録はこの端末のブラウザ内だけに保存されます。');
   const body=h('div',{class:'activity-panel'},
     info,
-    makeSwitch('オンライン状態','オンライン・離席・オフラインをDM相手に表示','activityStatus',opts.status),
-    makeSwitch('使用端末','PCかスマートフォンかを表示','activityDevice',opts.device),
-    makeSwitch('活動内容','下の入力欄に自分で入力した内容を表示','activityLabel',opts.label),
-    h('label',{},'共有する活動内容'),label,
+    makeSwitch('オンライン状態','オンライン・離席・オフラインを自動検出して表示','activityStatus',opts.status),
+    makeSwitch('使用端末','PCかスマートフォンかを自動判定して表示','activityDevice',opts.device),
+    makeSwitch('活動内容','ChatSpace内の利用状況を自動判定して表示（他アプリは検出しません）','activityLabel',opts.label),
+    h('div',{class:'activity-private'},'自動表示：DMを利用中／ChatSpaceを利用中／離席中'),
     makeSwitch('最終オンライン','最後にアクセスした時刻を表示','activityLastSeen',opts.lastSeen),
     h('div',{class:'activity-private'},h('b',{},'自分だけの利用時間'),h('div',{style:'font-size:20px;font-weight:700;margin-top:4px'},durationText(privateUsageToday())),h('small',{},'今日このブラウザでChatSpaceを開いていた時間。ほかの人には共有されません。')),
     h('button',{class:'btn',onclick:async()=>{
-      draft.activityText=label.value.trim().slice(0,40);
       prefs={...prefs,...draft};
       try {
         await setDoc(prefsRef(),{
-          activityStatus:prefs.activityStatus===true,
-          activityDevice:prefs.activityDevice===true,
-          activityLabel:prefs.activityLabel===true,
-          activityLastSeen:prefs.activityLastSeen===true,
-          activityText:prefs.activityText
+          activityStatus:prefs.activityStatus!==false,
+          activityDevice:prefs.activityDevice!==false,
+          activityLabel:prefs.activityLabel!==false,
+          activityLastSeen:prefs.activityLastSeen!==false
         },{merge:true});
         await publishDmActivity(document.hidden?'away':'online','*');
         close(); toast('共有設定を保存しました');
