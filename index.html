@@ -1899,7 +1899,7 @@ async function loadIce(force=false){
     const data = await res.json();
     const servers = (Array.isArray(data.iceServers) ? data.iceServers : []).map(server=>{
       const raw = Array.isArray(server.urls) ? server.urls : [server.urls];
-      const urls = raw.filter(url=>typeof url==='string' && /^(stun|stuns|turn|turns):/i.test(url) && !/:53(?:\\?|$)/.test(url));
+      const urls = raw.filter(url=>typeof url==='string' && /^(stun|stuns|turn|turns):/i.test(url) && !url.includes(":53?") && !url.endsWith(":53"));
       return {...server, urls};
     }).filter(server=>server.urls.length);
     if (!servers.some(server=>server.urls.some(url=>/^turns?:/i.test(url)))) throw new Error('TURNサーバー情報がありません');
