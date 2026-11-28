@@ -172,6 +172,19 @@ input,textarea{font:inherit;color:inherit}
 .filters button.explore{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700;padding-inline:11px}
 .filters button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:380px){.filters{grid-template-columns:repeat(3,minmax(0,1fr));}.filters button.explore{grid-column:1/-1}}
+.side-tools{padding:2px 12px 12px;display:grid;gap:9px}
+.side-tools-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.side-tools-head strong{font-size:13px;letter-spacing:.02em}
+.side-tools-head span{font-size:11px;color:var(--sub)}
+.room-search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:0 11px;min-height:40px}
+.room-search .ico{color:var(--sub);flex:none}
+.room-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:13px}
+.room-search input::placeholder{color:var(--sub)}
+.room-tool-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.room-tool-row button{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--sub);font-size:12px}
+.room-tool-row button.on{background:var(--hover);border-color:var(--accent);color:var(--ink);font-weight:700}
+.room-tool-row .hint{font-size:11px;color:var(--sub)}
+
 .ver{font-size:11px;color:var(--sub);text-align:center;padding:6px 0 10px}
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
 .swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
@@ -382,7 +395,7 @@ const STAMPS = {
 };
 let me = null, pendingName = null, users = {}, rooms = {};
 let cur = null, unsubMsgs = null, unsubUsers = null, unsubCols = [], hb = null;
-let curEls = new Map(), msgCache = new Map(), replyTo = null, listFilter = 'all';
+let curEls = new Map(), msgCache = new Map(), replyTo = null, listFilter = 'all', roomSearch = '', unreadOnly = false;
 let readMap = {}; try { readMap = JSON.parse(localStorage.getItem('cs_read') || '{}'); } catch(e){}
 let typingTimer = null, lastTypingSent = 0, pendingRead = new Set();
 const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -514,6 +527,14 @@ function startApp(){
             {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
         h('div',{id:'notifyBanner'}),
         h('div',{class:'filters',id:'filters'}),
+        h('div',{class:'side-tools'},
+          h('div',{class:'side-tools-head'},h('strong',{},'会話一覧'),h('span',{id:'roomCount'},'0件')),
+          h('label',{class:'room-search'},ico('search',17),h('input',{id:'roomSearch',type:'search',placeholder:'ルーム名・メッセージを検索',value:roomSearch,oninput:e=>{roomSearch=e.target.value;renderRooms();}})),
+          h('div',{class:'room-tool-row'},
+            h('button',{id:'unreadToggle',type:'button',class:unreadOnly?'on':'',onclick:()=>{unreadOnly=!unreadOnly;renderRooms();}},ico('bell',14),'未読のみ'),
+            h('span',{class:'hint'},'最近の会話が上に表示されます')
+          )
+        ),
         h('div',{class:'room-list',id:'roomList'}),
         h('div',{class:'ver'},'ChatSpace v'+VERSION)),
       h('main',{class:'main',id:'main'}, welcome())));
@@ -886,13 +907,20 @@ function drawModal(){
 /* ---------- room list ---------- */
 function renderRooms(){
   const list = $('#roomList'); if (!list) return;
-  const arr = Object.values(rooms).filter(r => listFilter==='all' || (listFilter==='dm') === isDm(r))
+  const isUnread = r => !!(r.id !== cur && r.lastUid && r.lastUid !== me.uid && ms(r.lastMsgTs) > (readMap[r.id] || 0));
+  const q = roomSearch.trim().toLocaleLowerCase();
+  const arr = Object.values(rooms)
+    .filter(r => listFilter==='all' || (listFilter==='dm') === isDm(r))
+    .filter(r => !unreadOnly || isUnread(r))
+    .filter(r => !q || [roomTitle(r),r.lastMsg,r.desc,r.id].some(v=>String(v||'').toLocaleLowerCase().includes(q)))
     .sort(roomSorter());
+  $('#roomCount').textContent = arr.length+'件';
+  $('#unreadToggle')?.classList.toggle('on',unreadOnly);
   list.replaceChildren();
-  if (!arr.length){ list.append(h('div',{class:'empty'},'ここにはまだ何もありません。',h('br'),'「ルーム」から作成・参加、または「DM」で友だちに話しかけましょう。')); return; }
+  if (!arr.length){ list.append(h('div',{class:'empty'},q?'検索に一致する会話がありません。':unreadOnly?'未読の会話はありません。':'ここにはまだ何もありません。',h('br'),'「新しく探す」から友だちやルームを追加できます。')); return; }
   for (const r of arr){
     const title = roomTitle(r), other = isDm(r) ? otherUid(r) : null;
-    const unread = r.id !== cur && r.lastUid && r.lastUid !== me.uid && ms(r.lastMsgTs) > (readMap[r.id] || 0);
+    const unread = isUnread(r);
     list.append(h('button',{class:'room'+(r.id===cur?' active':'')+(unread?' unread':''),onclick:()=>openRoom(r.id)},
       avatar(other || r.createdBy || r.id, title, false, other && isOnline(other)),
       h('div',{class:'meta'},
