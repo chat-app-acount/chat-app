@@ -126,6 +126,8 @@ service cloud.firestore {
             .hasOnly(['members'])
           && request.resource.data.members.toSet()
             .difference(resource.data.members.toSet()).hasOnly([request.auth.uid])
+          && resource.data.members.toSet()
+            .difference(request.resource.data.members.toSet()).size() == 0
           && request.resource.data.members.size() <= resource.data.members.size() + 1
         )
         || (
@@ -134,6 +136,8 @@ service cloud.firestore {
             .hasOnly(['members'])
           && resource.data.members.toSet()
             .difference(request.resource.data.members.toSet()).hasOnly([request.auth.uid])
+          && request.resource.data.members.toSet()
+            .difference(resource.data.members.toSet()).size() == 0
           && request.resource.data.members.size() == resource.data.members.size() - 1
         )
       );
@@ -198,8 +202,8 @@ service cloud.firestore {
         allow update: if activeUser() && dmMember(id) && (
           ownMessageUpdate() || memberMessageReactionUpdate()
         );
-        allow delete: if activeUser() && dmMember(id)
-          && resource.data.get('author', '') == request.auth.uid;
+        // A DM participant can clear the shared conversation when deleting the DM.
+        allow delete: if activeUser() && dmMember(id);
       }
       match /images/{iid} {
         allow read: if activeUser() && dmMember(id);
