@@ -585,12 +585,12 @@ function startApp(){
       h('main',{class:'main',id:'main'}, welcome())));
   drawFilters();
   listenUsers(); listenRooms();
-  const beat = () => { if (me && !document.hidden) { updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); publishDmActivity('online'); } };
+  const beat = () => { if (me && !document.hidden) { updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); publishDmActivity('online',cur); } };
   hb = setInterval(beat, 120000);
   clearInterval(schedT); schedT = setInterval(runSched, 15000); setTimeout(runSched, 3000);
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('focus', onVisible);
-  window.addEventListener('pagehide', () => { if (me) { updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); publishDmActivity('offline'); savePrivateUsage(); } if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
+  window.addEventListener('pagehide', () => { if (me) { updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); publishDmActivity('offline',cur); savePrivateUsage(); } if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
   document.addEventListener('click', e => { const p = $('#stamps'); if (p && !p.contains(e.target) && !e.target.closest('#stampBtn')) p.classList.remove('show'); });
   autoNotify();
   navigator.serviceWorker?.addEventListener('message', e => {
@@ -604,9 +604,9 @@ function teardown_listeners(){ unsubMsgs?.(); unsubUsers?.(); unsubCols.forEach(
 const welcome = () => h('div',{class:'welcome'}, h('div',{}, h('div',{style:'font-size:20px;font-weight:700;color:var(--ink);margin-bottom:6px'},'ようこそ、'+myName()+'さん'), h('div',{},'左の一覧からルームを選ぶか、新しく作ってみましょう。')));
 function onVisible(){
   if (!me) return;
-  if (document.hidden) { publishDmActivity('away'); return; }
+  if (document.hidden) { publishDmActivity('away',cur); return; }
   updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{});
-  publishDmActivity('online');
+  publishDmActivity('online',cur);
   flushRead();
 }
 function drawFilters(){
@@ -1044,10 +1044,10 @@ function durationText(msValue){
   const m=Math.floor(msValue/60000), h=Math.floor(m/60);
   return h ? h+'時間'+(m%60)+'分' : m+'分';
 }
-async function publishDmActivity(statusOverride){
+async function publishDmActivity(statusOverride, onlyRoomId=null){
   if (!me || !Object.keys(rooms).length) return;
   const opts=activityOptions(), nowStatus=statusOverride || (document.hidden?'away':'online');
-  const targets=Object.values(rooms).filter(r=>isDm(r) && (r.members||[]).includes(me.uid));
+  const targets=Object.values(rooms).filter(r=>isDm(r) && (r.members||[]).includes(me.uid) && (!onlyRoomId || r.id===onlyRoomId));
   await Promise.all(targets.map(async r=>{
     const jobs=[];
     jobs.push(setDoc(activityRef(r,'presence'),{status:nowStatus,share:opts.status,updatedAt:serverTimestamp()},{merge:true}));
@@ -1165,7 +1165,7 @@ function openRoom(id){
   renderHeader(); renderRooms();
   document.body.classList.toggle('hide-read', hidingRead()); drawMemoBar(id);
   subscribeMessages(id);
-  if (isDm(rooms[id])) { watchDmActivity(rooms[id]); publishDmActivity(document.hidden?'away':'online'); } else stopDmActivityWatch();
+  if (isDm(rooms[id])) { watchDmActivity(rooms[id]); publishDmActivity(document.hidden?'away':'online',id); } else stopDmActivityWatch();
 }
 function closeRoom(){
   unsubMsgs?.(); unsubMsgs = null; stopDmActivityWatch(); cur = null; pendingRead.clear(); replyTo = null;
