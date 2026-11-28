@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="ja" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e7a6d">
+<link rel="manifest" href="manifest.json?v=2">
+<link rel="icon" href="favicon.ico?v=2" sizes="any">
+<link rel="icon" type="image/png" href="icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icon-192.png?v=2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ChatSpace">
+<title>ChatSpace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eaf0ee;--panel:#f8faf9;--ink:#16221f;--sub:#6b7d78;--line:#d5dfdb;
+  --accent:#0e7a6d;--accent-ink:#fff;--mine:#0e7a6d;--mine-ink:#fff;--other:#fff;--hover:#e0e9e6;--danger:#c2410c;
+}
+@media(prefers-color-scheme:dark){
+  :root[data-theme="auto"]{--bg:#0c1211;--panel:#121b19;--ink:#e3efec;--sub:#8aa19b;--line:#223330;--accent:#34b8a6;--accent-ink:#06211d;--mine:#17705f;--mine-ink:#fff;--other:#1a2624;--hover:#182421;--danger:#fb923c}
+}
+:root[data-theme="dark"]{--bg:#0c1211;--panel:#121b19;--ink:#e3efec;--sub:#8aa19b;--line:#223330;--accent:#34b8a6;--accent-ink:#06211d;--mine:#17705f;--mine-ink:#fff;--other:#1a2624;--hover:#182421;--danger:#fb923c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ico{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--sub);transition:background .15s,color .15s}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.btn{background:var(--accent);color:var(--accent-ink);padding:10px 18px;border-radius:999px;font-weight:700}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--danger);color:#fff}
+.field{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);outline:none}
+.field:focus{border-color:var(--accent)}
+
+/* login */
+.login{height:100dvh;display:grid;place-items:center;padding:20px;overflow:auto}
+.login-card{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:32px 26px;display:grid;gap:14px}
+.wordmark{font-size:30px;font-weight:700;letter-spacing:.02em}
+.wordmark i{font-style:normal;color:var(--accent)}
+.login-card p.lead{color:var(--sub);margin-top:-6px}
+.login-card .err{color:var(--danger);font-size:13px;min-height:18px}
+.sep{display:flex;align-items:center;gap:10px;color:var(--sub);font-size:13px}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.linklike{color:var(--accent);font-weight:700;text-align:center}
+.setup{max-width:640px;margin:8vh auto;padding:0 20px;overflow:auto;height:84dvh}
+.setup code,.setup pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:13px}
+.setup pre{display:block;padding:12px;overflow:auto;margin:8px 0 16px}
+
+/* shell */
+.shell{display:grid;grid-template-columns:330px 1fr;height:100dvh}
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side-head{display:flex;align-items:center;gap:6px;padding:14px 12px 10px 18px}
+.side-head .wordmark{font-size:22px;flex:1}
+.side-actions{display:flex;gap:8px;padding:0 14px 12px}
+.side-actions .btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;font-size:14px}
+.room-list{flex:1;overflow-y:auto;padding:4px 8px 12px}
+.room{display:flex;gap:12px;align-items:center;padding:10px;border-radius:14px;cursor:pointer;width:100%;text-align:left}
+.room:hover{background:var(--hover)}
+.room.active{background:var(--hover);box-shadow:inset 3px 0 0 var(--accent)}
+.room .meta{flex:1;min-width:0}
+.room .top{display:flex;gap:8px;align-items:baseline}
+.room .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.room .time{font-size:12px;color:var(--sub);flex:none}
+.room .last{font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room.unread .last{color:var(--ink);font-weight:700}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:17px;flex:none;position:relative}
+.avatar.sm{width:34px;height:34px;font-size:14px}
+.avatar .on{position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--panel)}
+.empty{color:var(--sub);text-align:center;padding:40px 20px;font-size:14px}
+
+.main{display:flex;flex-direction:column;min-height:0;min-width:0;position:relative;background:var(--bg)}
+.chat-head{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.chat-head .back{display:none}
+.chat-head .titles{flex:1;min-width:0}
+.chat-head .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-head .s{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:18px}
+.chat-head .s.typing{color:var(--accent)}
+.msgs{flex:1;overflow-y:auto;padding:16px 14px 8px;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.hint{position:absolute;inset:60px 0 70px 0;display:grid;place-items:center;color:var(--sub);pointer-events:none;text-align:center;padding:20px}
+.welcome{flex:1;display:grid;place-items:center;color:var(--sub);text-align:center;padding:20px}
+.msg{display:flex;flex-direction:column;align-items:flex-start;max-width:min(78%,560px)}
+.msg.mine{align-self:flex-end;align-items:flex-end}
+.who{font-size:12px;color:var(--sub);margin:0 6px 2px}
+.bubble{background:var(--other);padding:8px 13px;border-radius:18px 18px 18px 6px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;cursor:pointer;border:1px solid var(--line)}
+.msg.mine .bubble{background:var(--mine);color:var(--mine-ink);border-color:transparent;border-radius:18px 18px 6px 18px}
+.bubble a{color:inherit;text-decoration:underline}
+.bubble.stamp{background:none;border:0;font-size:56px;line-height:1.15;padding:0 2px}
+.info{font-size:11px;color:var(--sub);margin:2px 6px 0;display:flex;gap:8px}
+.reacts{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:0 8px;font-size:13px;line-height:24px}
+.chip.on{border-color:var(--accent);background:var(--hover)}
+.bar{display:none;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 6px;margin-top:4px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.msg.open .bar{display:flex}
+.bar button{width:32px;height:32px;border-radius:50%;font-size:17px;display:grid;place-items:center}
+.bar button:hover{background:var(--hover)}
+.bar .del{color:var(--danger)}
+
+.composer{position:relative;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:none;max-height:140px;min-height:42px;padding:10px 14px;border-radius:21px;border:1px solid var(--line);background:var(--bg);outline:none;font-size:16px;line-height:1.45}
+.composer textarea:focus{border-color:var(--accent)}
+.send{background:var(--accent);color:var(--accent-ink)}
+.send:hover{background:var(--accent);color:var(--accent-ink);filter:brightness(1.08)}
+.send:disabled{opacity:.45}
+.stamps{position:absolute;left:8px;right:8px;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.18);display:none;flex-direction:column;max-width:420px;max-height:min(340px,50dvh)}
+.stamps.show{display:flex}
+.stab{display:flex;gap:2px;padding:6px 8px;border-bottom:1px solid var(--line);overflow-x:auto}
+.stab button{padding:4px 12px;border-radius:999px;font-size:13px;white-space:nowrap;color:var(--sub)}
+.stab button.on{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:2px;padding:8px;overflow-y:auto}
+.sgrid button{font-size:30px;line-height:1;padding:8px 0;border-radius:12px}
+.sgrid button:hover{background:var(--hover)}
+
+/* modal / popup / toast */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:20px;width:min(420px,100%);max-height:86dvh;display:flex;flex-direction:column}
+.modal-h{display:flex;align-items:center;padding:14px 12px 6px 20px;font-weight:700;font-size:17px}
+.modal-h span:first-child{flex:1}
+.modal-b{padding:8px 20px 20px;display:grid;gap:12px;overflow-y:auto}
+.tabs{display:flex;gap:4px;background:var(--bg);border-radius:999px;padding:3px}
+.tabs button{flex:1;padding:7px;border-radius:999px;font-weight:700;color:var(--sub)}
+.tabs button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.urow{display:flex;gap:12px;align-items:center;padding:8px;border-radius:12px;width:100%;text-align:left}
+.urow:hover{background:var(--hover)}
+.urow .n{flex:1;min-width:0}
+.urow .n small{display:block;color:var(--sub);font-size:12px}
+.popup{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;min-width:220px}
+.popup button{display:flex;gap:10px;align-items:center;width:100%;padding:10px 12px;border-radius:10px;text-align:left}
+.popup button:hover{background:var(--hover)}
+.popup .danger{color:var(--danger)}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;z-index:70;font-size:14px;max-width:90vw}
+.codebox{display:flex;gap:8px;align-items:center;background:var(--bg);border-radius:12px;padding:10px 14px;font-weight:700;letter-spacing:.15em;justify-content:space-between}
+
+@media(max-width:760px){
+  .shell{display:block;position:relative}
+  .side,.main{position:absolute;inset:0;width:100%}
+  .main{transform:translateX(100%);transition:transform .22s ease;z-index:5}
+  body.in-chat .main{transform:none}
+  .chat-head .back{display:inline-flex}
+  .msg{max-width:86%}
+}
+@media(prefers-reduced-motion:reduce){.main{transition:none}}
+
+.composer{flex-direction:column;align-items:stretch;gap:6px}
+.crow{display:flex;align-items:flex-end;gap:8px}
+.replybar{display:flex;align-items:center;gap:8px;padding:4px 6px 4px 10px;border-left:3px solid var(--accent);background:var(--bg);border-radius:8px;font-size:13px;color:var(--sub)}
+.replybar span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sys{align-self:center;font-size:12px;color:var(--sub);background:var(--hover);padding:2px 12px;border-radius:999px;margin:6px 0;text-align:center}
+.quote{font-size:12px;border-left:3px solid var(--accent);padding:1px 8px;margin:0 4px 3px;color:var(--sub);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bubble.deleted{font-style:italic;color:var(--sub);background:transparent;border-style:dashed;cursor:default}
+.msg.mine .bubble.deleted{color:var(--sub)}
+.pinbar{display:flex;gap:8px;align-items:center;padding:6px 14px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;color:var(--sub);cursor:pointer}
+.pinbar span:last-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg.flash .bubble{animation:flash 1.6s}
+@keyframes flash{0%,50%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+.bar{flex-wrap:wrap;max-width:280px;border-radius:18px}
+.msg.mine .bar{justify-content:flex-end}
+.bar .sp{width:1px;background:var(--line);margin:4px 3px}
+.filters{display:flex;gap:4px;padding:0 14px 8px}
+.filters button{padding:3px 12px;border-radius:999px;font-size:13px;color:var(--sub)}
+.filters button.on{background:var(--hover);color:var(--ink);font-weight:700}
+.ver{font-size:11px;color:var(--sub);text-align:center;padding:6px 0 10px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
+.swatches button.on{border-color:var(--ink)}
+.hit{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:10px}
+.hit:hover{background:var(--hover)}
+.hit small{display:block;color:var(--sub);font-size:12px}
+.hit div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[hidden]{display:none!important}
+.side-head .logo{margin-right:2px}
+.side-head .wordmark{flex:1}
+.login-card .logo{margin-bottom:-4px}
+.nbanner{display:flex;gap:10px;align-items:center;margin:0 12px 8px;padding:8px 8px 8px 12px;border-radius:14px;background:var(--hover);font-size:13px}
+.nbanner span{flex:1;min-width:0}
+.nbanner .btn{padding:6px 12px;font-size:13px;white-space:nowrap}
+.bubble.imgb{padding:3px;background:var(--other);border:1px solid var(--line)}
+.msg.mine .bubble.imgb{background:var(--mine)}
+.pic{display:block;max-width:min(260px,100%);max-height:360px;border-radius:15px;cursor:zoom-in}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);display:grid;place-items:center;z-index:80;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.lb img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform;touch-action:none;-webkit-user-drag:none}
+.lb-bar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:10px;display:flex;gap:6px;z-index:2}
+.lb-bar button,.lb-bar a{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;line-height:1}
+.lb-bar button:hover,.lb-bar a:hover{background:rgba(255,255,255,.26)}
+.lb-note{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.55);padding:4px 14px;border-radius:999px;font-size:12px;z-index:2}
+.imore{color:var(--sub);line-height:1;padding:0 4px;display:inline-flex;align-items:center}
+.callov{position:fixed;inset:0;background:rgba(8,18,16,.97);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:90;padding:24px;text-align:center}
+.callov .avatar{width:104px;height:104px;font-size:44px;margin-bottom:6px}
+.callov .cname{font-size:24px;font-weight:700}
+.callov .cstat{color:rgba(255,255,255,.7);min-height:24px}
+.cbtns{display:flex;gap:34px;margin-top:34px}
+.cbtn{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.cbtn.on{background:#fff;color:#111}
+.cbtn.red{background:#dc2626}.cbtn.green{background:#16a34a}
+.cbtn.red .ico{transform:rotate(135deg)}
+.gl{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;max-width:440px;margin-top:6px}
+.gl .gp{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;width:88px;overflow:hidden}
+.callov .gl .avatar{width:58px;height:58px;font-size:24px;margin:0}
+.gl .gp small{color:rgba(255,255,255,.65);font-size:11px}
+.callbar{display:flex;gap:10px;align-items:center;padding:8px 14px;background:var(--accent);color:var(--accent-ink);font-size:14px;cursor:pointer;width:100%;text-align:left}
+.callbar span{flex:1}
+.callov .rv{width:min(94vw,980px);max-height:62vh;border-radius:12px;background:#000;cursor:zoom-in;object-fit:contain}
+.callov .gvid{display:flex;flex-direction:column;align-items:center;gap:6px}
+.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.mention{color:var(--accent);font-weight:700;background:var(--hover);border-radius:4px;padding:0 3px}
+.msg.mine .mention{color:#fff;background:rgba(255,255,255,.22)}
+.bubble.mentioned{box-shadow:0 0 0 2px var(--accent)}
+.sug{position:absolute;left:8px;right:8px;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);max-width:360px;padding:4px;z-index:5}
+.sug button{display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border-radius:10px;text-align:left}
+.sug button:hover,.sug button.first{background:var(--hover)}
+.poll{display:grid;gap:6px;min-width:min(240px,70vw)}
+.poll .pq{font-weight:700;margin-bottom:2px}
+.popt{position:relative;display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-align:left;overflow:hidden}
+.popt .pbar{position:absolute;left:0;top:0;bottom:0;background:var(--hover);z-index:0;transition:width .25s}
+.popt.on{border-color:var(--accent)}
+.popt.on .pbar{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+.popt .ptxt{position:relative;z-index:1;flex:1;word-break:break-word}
+.popt .pcnt{position:relative;z-index:1;font-size:12px;color:var(--sub)}
+.popt:disabled{opacity:.75;cursor:default}
+.poll .pfoot{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--sub)}
+.msg.mine .bubble .poll .pq{color:var(--mine-ink)}
+.msg.mine .bubble .pfoot{color:rgba(255,255,255,.75)}
+.pimg{display:flex;align-items:center;gap:14px}
+.pimg .avatar{width:72px;height:72px;font-size:30px}
+.callov .pv{width:128px;aspect-ratio:4/3;border-radius:10px;background:#000;object-fit:cover;cursor:zoom-in}
+.pips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.callov .gpv{width:152px;aspect-ratio:4/3;border-radius:10px;background:#000;object-fit:cover;cursor:zoom-in}
+.gl .gp.cam{width:156px}
+body.hide-read .rd{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, limitToLast, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const VERSION = '3.8 (2026-11-25)';
+const firebaseConfig = {
+  apiKey: "AIzaSyDq8dDcnA2JHC3Xi7seXFIkidwmHoI7Ihg",
+  authDomain: "chat-app-44d95.firebaseapp.com",
+  projectId: "chat-app-44d95",
+  storageBucket: "chat-app-44d95.firebasestorage.app",
+  messagingSenderId: "689926338538",
+  appId: "1:689926338538:web:33281528795be00371a493"
+};
+// 通知中継（Cloudflare Workers）のURL。作成後にここへ貼り付けます。空のままなら中継はしません。
+const PUSH_URL = '';
+const VAPID_KEY = 'BFUPo_ieRYgmkTzUA3hRMZTooyvC68Ppzlv1p0lp1fEUbAXe8UQKLUUoWHigILXPOHUSmutXrHoUefy8xCnDIQw';
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+function h(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs || {})){
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()){ if (c == null || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(c)); }
+  return e;
+}
+const IC = {
+  send:'<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
+  smile:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+  back:'<path d="M15 18l-6-6 6-6"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  auto:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  msg:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  more:'<circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/>',
+  reply:'<path d="M9 14 4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+  edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  pin:'<path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/>',
+  micoff:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M2 2l20 20"/>',
+  screen:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  poll:'<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V7M17 16v-3"/>',
+  memo:'<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',brush:'<path d="M4 20c4 0 5-2 5-4 0-1-1-2-2-2s-3 1-3 6z"/><path d="M9 14L19 4l1 1-10 10"/>',grid9:'<path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01" stroke-width="3.5"/>',game:'<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5M16 11h.01M18 14h.01"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',belloff:'<path d="M13.7 21a2 2 0 0 1-3.4 0M18 8a6 6 0 0 0-9.3-5M6 6c0 7-3 9-3 9h13M2 2l20 20"/>',
+  video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/>',
+  videooff:'<path d="M16 16v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L22 8v8M2 2l20 20"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
+};
+const ico = (n, s=20) => h('span', {class:'ico', html:`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`});
+const logoMark = (n=32) => h('span',{class:'ico logo',html:`<svg width="${n}" height="${n}" viewBox="0 0 1024 1024" aria-hidden="true"><rect width="1024" height="1024" rx="224" fill="#0e7a6d"/><rect x="240" y="270" width="544" height="420" rx="120" fill="#fff"/><path d="M320 660v130l130-110z" fill="#fff"/><circle cx="392" cy="480" r="36" fill="#0e7a6d"/><circle cx="512" cy="480" r="36" fill="#0e7a6d"/><circle cx="632" cy="480" r="36" fill="#0e7a6d"/></svg>`});
+const ms = t => (t && t.toMillis) ? t.toMillis() : (typeof t === 'number' ? t : 0);
+const fmtTime = t => { const v = ms(t); return v ? new Date(v).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) : ''; };
+const fmtList = t => {
+  const v = ms(t); if (!v) return '';
+  const d = new Date(v), n = new Date();
+  return d.toDateString() === n.toDateString() ? fmtTime(t) : d.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
+};
+const COLORS = ['#7c6af7','#f472b6','#34d399','#fb923c','#60a5fa','#a78bfa','#f59e0b','#10b981','#ef4444','#06b6d4'];
+const colorOf = uid => users[uid]?.color || COLORS[[...String(uid)].reduce((a,c)=>(a*31+c.charCodeAt(0))%COLORS.length,0)];
+function avatar(uid, label, small, online){
+  const photo = users[uid] && users[uid].photo;
+  const a = h('div',{class:'avatar'+(small?' sm':''),style:`background:${colorOf(uid)}`}, typeof photo === 'string' && photo.startsWith('data:image/') ? h('img',{src:photo,alt:''}) : (Array.from(label||'?')[0] || '?'));
+  if (online) a.append(h('span',{class:'on'}));
+  return a;
+}
+function toast(t){ document.querySelectorAll('.toast').forEach(x=>x.remove()); const e = h('div',{class:'toast',role:'status'},t); document.body.append(e); setTimeout(()=>e.remove(),2800); }
+function modal(title, body){
+  const close = () => ov.remove();
+  const ov = h('div',{class:'overlay',onclick:e=>{ if(e.target===ov) close(); }},
+    h('div',{class:'modal',role:'dialog','aria-label':title},
+      h('div',{class:'modal-h'}, h('span',{},title), h('button',{class:'icon-btn','aria-label':'閉じる',onclick:close}, ico('x'))),
+      h('div',{class:'modal-b'}, body)));
+  document.body.append(ov);
+  return close;
+}
+function confirmBox(title, text, okLabel){
+  return new Promise(res => {
+    let close; const done = v => { close(); res(v); };
+    close = modal(title, [h('p',{},text), h('div',{style:'display:flex;gap:8px;justify-content:flex-end'},
+      h('button',{class:'btn ghost',onclick:()=>done(false)},'キャンセル'),
+      h('button',{class:'btn danger',onclick:()=>done(true)},okLabel))]);
+  });
+}
+function popup(anchor, items){
+  document.querySelectorAll('.popup').forEach(x=>x.remove());
+  const r = anchor.getBoundingClientRect();
+  const p = h('div',{class:'popup'}, items.map(it => h('button',{class:it.danger?'danger':'',onclick:()=>{p.remove(); it.run();}}, ico(it.icon,18), it.label)));
+  document.body.append(p);
+  const w = p.offsetWidth;
+  p.style.top = (r.bottom + 6) + 'px';
+  p.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+  setTimeout(()=>document.addEventListener('click', function f(){ p.remove(); document.removeEventListener('click', f); }), 0);
+}
+
+const app = $('#app');
+const fb = initializeApp(firebaseConfig);
+const auth = getAuth(fb);
+const db = getFirestore(fb);
+
+/* ---------- state ---------- */
+const REACTIONS = ['👍','❤️','😂','😮','😢','🔥'];
+const STAMPS = {
+  '表情':'😀 😁 😂 🤣 😊 😍 😘 😎 🤔 😴 😭 😡 🥺 😱 🤗 🙄 😏 🥳 😇 🤩 😅 😆 😋 🤪',
+  'ハート':'❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💖 💕 💘 💝 💗 💓 💞 💌',
+  '手':'👍 👎 👏 🙌 🙏 💪 👌 ✌️ 🤝 👋 🤞 🫶 👀 🙇 🤦 🤷',
+  '動物':'🐶 🐱 🐭 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐸 🐵 🐧 🐤 🦄 🐢 🐙 🐳',
+  '食べ物':'🍎 🍓 🍜 🍣 🍙 🍔 🍕 🍟 🍩 🍰 🍺 ☕ 🍵 🍫 🍦 🍇',
+  'その他':'🎉 🎂 🎁 🔥 ✨ ⭐ 🌈 ☀️ 🌙 ⚡ 💯 ✅ ❌ 🎮 🎵 💤'
+};
+let me = null, pendingName = null, users = {}, rooms = {};
+let cur = null, unsubMsgs = null, unsubUsers = null, unsubCols = [], hb = null;
+let curEls = new Map(), msgCache = new Map(), replyTo = null, listFilter = 'all';
+let readMap = {}; try { readMap = JSON.parse(localStorage.getItem('cs_read') || '{}'); } catch(e){}
+let typingTimer = null, lastTypingSent = 0, pendingRead = new Set();
+const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+const isQuiet = () => localStorage.getItem('cs_quiet') === '1';
+function toggleQuiet(){ localStorage.setItem('cs_quiet', isQuiet() ? '0' : '1'); toast(isQuiet() ? '静かモード：着信音や通知音を鳴らしません' : '静かモードをオフにしました'); }
+const inFocus = () => !document.hidden && document.hasFocus();
+const isDm = r => r.col === 'dms';
+const myName = () => users[me?.uid]?.name || me?.displayName || pendingName || (me?.email||'').split('@')[0] || 'ゲスト';
+const nameOf = uid => users[uid]?.name || '不明';
+const ADMIN_EMAIL = 'yui.rugby.1128@gmail.com';
+const isSiteAdmin = () => (me?.email || '').toLowerCase() === ADMIN_EMAIL;
+const POST_MSG = 'このルームに書き込めるのは管理者だけです';
+const isOnline = uid => users[uid]?.online && Date.now() - ms(users[uid]?.lastSeen) < 150000;
+const otherUid = r => (r.members||[]).find(u => u !== me.uid);
+const roomTitle = r => isDm(r) ? nameOf(otherUid(r)) : (r.name || 'ルーム');
+const roomRef = r => doc(db, r.col, r.id);
+const msgCol = r => collection(db, r.col, r.id, 'messages');
+const saveRead = () => { try{ localStorage.setItem('cs_read', JSON.stringify(readMap)); }catch(e){} };
+
+/* ---------- theme ---------- */
+const THEMES = ['auto','light','dark'];
+const themeIcon = () => ({auto:'auto',light:'sun',dark:'moon'})[localStorage.getItem('cs_theme') || 'auto'];
+function applyTheme(){ document.documentElement.dataset.theme = localStorage.getItem('cs_theme') || 'auto'; }
+function cycleTheme(){
+  const c = localStorage.getItem('cs_theme') || 'auto';
+  localStorage.setItem('cs_theme', THEMES[(THEMES.indexOf(c)+1)%3]); applyTheme();
+  $('#themeBtn')?.replaceChildren(ico(themeIcon()));
+  toast('テーマ: ' + ({auto:'自動',light:'ライト',dark:'ダーク'})[localStorage.getItem('cs_theme')]);
+}
+applyTheme();
+
+/* ---------- service worker ---------- */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(r => r.update()).catch(()=>{});
+
+/* ---------- shared links ( ?room=ID / ?invite=ID / ?join=ID ) ---------- */
+{
+  const p = new URLSearchParams(location.search);
+  const room = p.get('room') || p.get('join'), inv = p.get('invite');
+  if (room) sessionStorage.setItem('cs_room', room);
+  if (inv) sessionStorage.setItem('cs_invite', inv);
+  if (room || inv) history.replaceState(null, '', location.pathname);
+}
+
+/* ---------- auth ---------- */
+onAuthStateChanged(auth, async u => {
+  if (!u){ teardown(); showLogin(); return; }
+  me = u;
+  await ensureProfile(u);
+  try { const sn = await getDoc(doc(db,'users',u.uid)); if (sn.data()?.banned){ alert('このアカウントは管理者により利用停止されています'); await auth.signOut(); return; } } catch(e){}
+  await loadPrefs();
+  showAnnounce(); loadIce();
+  startApp();
+});
+async function ensureProfile(u){
+  const ref = doc(db,'users',u.uid);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()){
+      await setDoc(ref, {uid:u.uid, name:pendingName || u.displayName || (u.email||'').split('@')[0] || 'ゲスト', email:u.email||'', photoURL:u.photoURL||null, color:COLORS[Math.floor(Math.random()*COLORS.length)], online:true, lastSeen:serverTimestamp(), createdAt:serverTimestamp()});
+    } else await updateDoc(ref, {online:true, lastSeen:serverTimestamp()});
+  } catch(e){ console.error('profile', e); }
+}
+
+function showLogin(){
+  app.replaceChildren();
+  let signup = false;
+  const err = h('div',{class:'err',role:'alert'});
+  const nameF = h('input',{class:'field',placeholder:'表示名',autocomplete:'nickname',style:'display:none'});
+  const mail = h('input',{class:'field',type:'email',placeholder:'メールアドレス',autocomplete:'email'});
+  const pass = h('input',{class:'field',type:'password',placeholder:'パスワード（6文字以上）',autocomplete:'current-password'});
+  const go = h('button',{class:'btn'},'ログイン');
+  const sw = h('button',{class:'linklike'},'はじめての方はこちら（新規登録）');
+  const msgs = {'auth/invalid-credential':'メールアドレスかパスワードが違います','auth/email-already-in-use':'このメールアドレスはすでに登録されています','auth/weak-password':'パスワードは6文字以上にしてください','auth/invalid-email':'メールアドレスの形式が正しくありません','auth/popup-closed-by-user':'','auth/network-request-failed':'ネットワークに接続できません','auth/unauthorized-domain':'このドメインはFirebaseで許可されていません'};
+  const fail = e => { err.textContent = msgs[e.code] ?? (e.message && !e.code ? e.message : 'ログインできませんでした（' + (e.code||'') + '）'); go.disabled = false; };
+  sw.onclick = () => { signup = !signup; nameF.style.display = signup ? '' : 'none'; go.textContent = signup ? '登録してはじめる' : 'ログイン'; sw.textContent = signup ? 'アカウントをお持ちの方はこちら' : 'はじめての方はこちら（新規登録）'; };
+  const submit = async () => {
+    err.textContent = ''; go.disabled = true;
+    try {
+      if (signup){
+        if (!nameF.value.trim()) throw {message:'表示名を入力してください'};
+        pendingName = nameF.value.trim();
+        const c = await createUserWithEmailAndPassword(auth, mail.value.trim(), pass.value);
+        await updateProfile(c.user, {displayName: pendingName});
+      } else await signInWithEmailAndPassword(auth, mail.value.trim(), pass.value);
+    } catch(e){ fail(e); }
+  };
+  go.onclick = submit;
+  [mail, pass, nameF].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) submit(); }));
+  const google = h('button',{class:'btn ghost',onclick:async()=>{
+    err.textContent = '';
+    try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+    catch(e){ if (e.code === 'auth/popup-blocked') signInWithRedirect(auth, new GoogleAuthProvider()); else fail(e); }
+  }},'Googleでログイン');
+  app.append(h('div',{class:'login'}, h('div',{class:'login-card'},
+    logoMark(56), h('div',{class:'wordmark'},'Chat',h('i',{},'Space')),
+    h('p',{class:'lead'},'友だちとすぐつながれるチャット'),
+    google, h('div',{class:'sep'},'または'), nameF, mail, pass, err, go, sw)));
+}
+async function logout(){
+  if (call) await finishCall(call, 'ended', true);
+  if (gcall) await leaveGroupCall();
+  try { await updateDoc(doc(db,'users',me.uid), {online:false}); } catch(e){}
+  await signOut(auth);
+}
+function teardown(){
+  unsubMsgs?.(); unsubUsers?.(); unsubCols.forEach(f=>f()); clearInterval(hb);
+  unsubMsgs = unsubUsers = null; unsubCols = []; cur = null; rooms = {}; users = {}; me = null;
+  document.body.classList.remove('in-chat');
+  document.removeEventListener('visibilitychange', onVisible);
+}
+
+/* ---------- app shell ---------- */
+function startApp(){
+  teardown_listeners();
+  app.replaceChildren(
+    h('div',{class:'shell'},
+      h('aside',{class:'side'},
+        h('div',{class:'side-head'},
+          logoMark(32), h('div',{class:'wordmark'},'Chat',h('i',{},'Space')),
+          h('button',{class:'icon-btn',id:'themeBtn','aria-label':'テーマを切り替え',onclick:cycleTheme}, ico(themeIcon())),
+          h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e=>popup(e.currentTarget,[
+            {icon:'user',label:'プロフィールを編集',run:profileModal},
+            {icon:'bell',label:'通知をオンにする',run:()=>setupPush(true)},
+            {icon:'bell',label:'通知の状態を確認',run:notifyDiag},
+            {icon:'belloff',label:isQuiet() ? '静かモードをオフにする' : '静かモードをオンにする（音を鳴らさない）',run:toggleQuiet},
+            {icon:'users',label:'ルームの並べ替え',run:sortModal},
+            ...(isSiteAdmin() ? [{icon:'users',label:'管理パネル',run:adminPanel}] : []),
+            {icon:'logout',label:'ログアウト',run:logout}])}, ico('more'))),
+        h('div',{class:'side-actions'},
+          h('button',{class:'btn',onclick:roomModal},ico('users',18),'ルーム'),
+          h('button',{class:'btn ghost',onclick:dmModal},ico('msg',18),'DM')),
+        h('div',{id:'notifyBanner'}),
+        h('div',{class:'filters',id:'filters'}),
+        h('div',{class:'room-list',id:'roomList'}),
+        h('div',{class:'ver'},'ChatSpace v'+VERSION)),
+      h('main',{class:'main',id:'main'}, welcome())));
+  drawFilters();
+  listenUsers(); listenRooms();
+  const beat = () => { if (me && !document.hidden) updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); };
+  hb = setInterval(beat, 120000);
+  clearInterval(schedT); schedT = setInterval(runSched, 15000); setTimeout(runSched, 3000);
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('focus', onVisible);
+  window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
+  document.addEventListener('click', e => { const p = $('#stamps'); if (p && !p.contains(e.target) && !e.target.closest('#stampBtn')) p.classList.remove('show'); });
+  autoNotify();
+  navigator.serviceWorker?.addEventListener('message', e => {
+    if (e.data && e.data.type === 'NOTIFICATION_CLICK'){ try{ const id = new URL(e.data.url, location.origin).searchParams.get('room'); if (id && rooms[id]) openRoom(id); }catch(_){} }
+  });
+  const room = sessionStorage.getItem('cs_room'), inv = sessionStorage.getItem('cs_invite');
+  if (room){ sessionStorage.removeItem('cs_room'); joinByCode(room); }
+  if (inv){ sessionStorage.removeItem('cs_invite'); joinByInvite(inv); }
+}
+function teardown_listeners(){ unsubMsgs?.(); unsubUsers?.(); unsubCols.forEach(f=>f()); unsubCols = []; clearInterval(hb); cur = null; rooms = {}; document.removeEventListener('visibilitychange', onVisible); }
+const welcome = () => h('div',{class:'welcome'}, h('div',{}, h('div',{style:'font-size:20px;font-weight:700;color:var(--ink);margin-bottom:6px'},'ようこそ、'+myName()+'さん'), h('div',{},'左の一覧からルームを選ぶか、新しく作ってみましょう。')));
+function onVisible(){
+  if (!me || document.hidden) return;
+  updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{});
+  flushRead();
+}
+function drawFilters(){
+  const f = $('#filters'); if (!f) return;
+  f.replaceChildren(...[['all','すべて'],['group','ルーム'],['dm','DM']].map(([k,l]) => h('button',{class:listFilter===k?'on':'',onclick:()=>{ listFilter=k; drawFilters(); renderRooms(); }}, l)));
+}
+
+/* ---------- listeners ---------- */
+function listenUsers(){
+  unsubUsers = onSnapshot(collection(db,'users'), snap => {
+    users = {}; snap.forEach(d => users[d.id] = d.data());
+    if (me && users[me.uid]?.banned){ alert('このアカウントは管理者により利用停止されています'); auth.signOut(); return; }
+    renderRooms(); renderHeader();
+  }, e => console.error('users', e));
+}
+function listenRooms(){
+  const bucket = {rooms:{}, dms:{}}, loaded = {rooms:false, dms:false};
+  const watch = col => onSnapshot(query(collection(db,col), where('members','array-contains', me.uid)), snap => {
+    const next = {};
+    snap.forEach(d => next[d.id] = {id:d.id, col, ...d.data({serverTimestamps:'estimate'})});
+    if (loaded[col]) for (const r of Object.values(next)){
+      const p = bucket[col][r.id];
+      if (p && ms(r.lastMsgTs) > ms(p.lastMsgTs) && r.lastUid && r.lastUid !== me.uid && (!inFocus() || r.id !== cur)) notify(r);
+      if (!p && col === 'rooms' && r.createdBy !== me.uid && (r.invited || []).includes(me.uid)) toast('「' + (r.name || 'ルーム') + '」に招待されました');
+    }
+    bucket[col] = next; loaded[col] = true;
+    rooms = {...bucket.rooms, ...bucket.dms};
+    callWatch();
+    if (cur && !rooms[cur] && loaded.rooms && loaded.dms){ toast('このルームは利用できなくなりました'); closeRoom(); }
+    if (cur && rooms[cur]){ readMap[cur] = Date.now(); saveRead(); }
+    renderRooms(); renderHeader();
+  }, e => { console.error(col, e); toast('一覧を読み込めません（Firestoreのルールを確認してください）'); });
+  unsubCols = [watch('rooms'), watch('dms')];
+}
+
+/* ---------- site admin ---------- */
+async function reportMsg(r, id, m){
+  if (!(await confirmBox('メッセージを通報', '管理者にこのメッセージを知らせます。', '通報する'))) return;
+  try {
+    await addDoc(collection(db,'reports'), {roomId:r.id, col:r.col, roomName:roomTitle(r), msgId:id, text:(m.hasImage ? '（画像）' : String(m.text||'')).slice(0,200), fromUid:m.author, byUid:me.uid, ts:serverTimestamp()});
+    toast('通報しました');
+  } catch(e){ console.error(e); toast('通報できませんでした'); }
+}
+async function logAdmin(action, target, note){ try { await addDoc(collection(db,'adminLog'), {ts:serverTimestamp(), by:me.uid, action, target:target || '', note:note || ''}); } catch(e){} }
+async function showAnnounce(){
+  try {
+    const sn = await getDoc(doc(db,'config','announce')), t = sn.exists() ? (sn.data().text || '') : '';
+    if (!t || localStorage.getItem('cs_ann') === t) return;
+    const bar = h('div',{style:'position:fixed;top:0;left:0;right:0;z-index:60;padding:8px 44px 8px 14px;background:#fff3cd;color:#664d03;font-size:14px;border-bottom:1px solid #e0cf8a'}, '📢 ' + t,
+      h('button',{'aria-label':'閉じる',style:'position:absolute;right:8px;top:4px;background:none;border:0;font-size:20px;color:inherit;cursor:pointer',onclick:()=>{ localStorage.setItem('cs_ann', t); bar.remove(); }}, '×'));
+    document.body.append(bar);
+  } catch(e){}
+}
+function adminPanel(){
+  if (!isSiteAdmin()) return;
+  let tab = 'home', q = '', sortBy = 'seen', showDone = false;
+  const tabs = h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'});
+  const search = h('input',{class:'field',placeholder:'名前・メールで検索',style:'display:none',oninput:e=>{ q = e.target.value.trim().toLowerCase(); draw(); }});
+  const list = h('div',{style:'display:grid;gap:2px;max-height:55vh;overflow:auto'});
+  const sb = (l, cls, fn) => h('button',{class:'btn '+cls,style:'padding:5px 12px;font-size:13px',onclick:fn}, l);
+  const row = (...c) => h('div',{style:'display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--line)'}, ...c);
+  const small = t => h('div',{style:'font-size:12px;opacity:.7;word-break:break-all'}, t);
+  const when = t => { const v = ms(t); return v ? new Date(v).toLocaleString('ja-JP',{year:'2-digit',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'; };
+  const ban = async (u, on) => {
+    let why = ''; if (on){ why = prompt('停止の理由（メモ）', ''); if (why === null) return; }
+    try { await updateDoc(doc(db,'users',u.uid), {banned:on, banReason:on ? why : ''}); logAdmin(on ? '停止' : '停止解除', u.name, why); toast(on ? '停止しました' : '解除しました'); setTimeout(draw, 600); }
+    catch(e){ toast('変更できませんでした（ルールを確認してください）'); }
+  };
+  const userDetail = async u => {
+    const body = h('div',{style:'display:grid;gap:6px;font-size:14px'}, h('div',{},'読み込み中…'));
+    modal(u.name || '不明', [body]);
+    try {
+      const rs = await getDocs(query(collection(db,'rooms'), where('members','array-contains',u.uid)));
+      const rp = await getDocs(collection(db,'reports'));
+      body.replaceChildren(h('div',{},'メール：' + (u.email || '—')), h('div',{},'登録：' + when(u.createdAt)), h('div',{},'最終ログイン：' + when(u.lastSeen)),
+        h('div',{},'状態：' + (u.banned ? '停止中（' + (u.banReason || '理由なし') + '）' : 'ふつう')), h('div',{},'通報された回数：' + rp.docs.filter(d => d.data().fromUid === u.uid).length + '回'),
+        h('div',{},'入っているルーム（' + rs.size + '）：' + (rs.docs.map(d => d.data().name || 'DM').join('、') || 'なし')));
+    } catch(e){ body.replaceChildren(h('div',{},'読み込めませんでした')); }
+  };
+  const draw = async () => {
+    tabs.replaceChildren(...[['home','概要'],['users','登録者'],['rooms','ルーム'],['reports','通報'],['log','記録'],['ann','お知らせ']].map(([k,l]) => h('button',{class:'btn '+(tab === k ? '' : 'ghost'),style:'padding:5px 12px;font-size:13px',onclick:()=>{ tab = k; draw(); }}, l)));
+    search.style.display = tab === 'users' ? '' : 'none';
+    list.replaceChildren(h('div',{class:'empty'},'読み込み中…'));
+    try {
+      const rows = [];
+      if (tab === 'home'){
+        const us = Object.values(users), day = Date.now() - 864e5;
+        const [rs, rp] = await Promise.all([getDocs(collection(db,'rooms')), getDocs(collection(db,'reports'))]);
+        const stat = (l, v) => h('div',{style:'padding:10px;border:1px solid var(--line);border-radius:10px;text-align:center'}, h('div',{style:'font-size:22px;font-weight:700'}, String(v)), small(l));
+        rows.push(h('div',{style:'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px'}, stat('登録者', us.length), stat('いまオンライン', us.filter(u => isOnline(u.uid)).length), stat('今日の新規', us.filter(u => ms(u.createdAt) > day).length), stat('停止中', us.filter(u => u.banned).length), stat('ルーム', rs.size), stat('未対応の通報', rp.docs.filter(d => d.data().status !== 'done').length)),
+          h('p',{style:'font-size:13px'}, '通知の確認（10秒おき）だけで、1日に約17,300回の読み取りを使います。無料枠（1日5万回）の約35%です。数字は目安です。'),
+          h('p',{style:'font-size:13px'}, '正確な使用量は ', h('a',{href:'https://console.firebase.google.com/project/chat-app-44d95/firestore/usage',target:'_blank',rel:'noopener'}, 'Firebaseの使用状況'), ' で見られます。'));
+      } else if (tab === 'users'){
+        const key = {seen:u => -ms(u.lastSeen), name:u => u.name || '', made:u => -ms(u.createdAt)}[sortBy];
+        rows.push(h('div',{style:'display:flex;gap:6px;margin-bottom:6px'}, ...[['seen','最終ログイン'],['name','名前'],['made','登録順']].map(([k,l]) => sb(l, sortBy === k ? '' : 'ghost', ()=>{ sortBy = k; draw(); }))));
+        Object.values(users).filter(u => !q || ((u.name || '') + (u.email || '')).toLowerCase().includes(q)).sort((a,b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0).forEach(u => rows.push(row(
+          h('button',{style:'background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer',onclick:()=>userDetail(u)}, h('b',{}, u.name || '不明'), u.banned ? '（停止中）' : '', small((u.email || '') + '｜' + (isOnline(u.uid) ? 'オンライン' : '最終 ' + when(u.lastSeen)))),
+          u.uid === me.uid ? null : sb(u.banned ? '解除' : '停止', 'ghost', () => ban(u, !u.banned)))));
+      } else if (tab === 'rooms'){
+        const sn = await getDocs(collection(db,'rooms'));
+        sn.docs.sort((a,b) => ms(b.data().lastMsgTs) - ms(a.data().lastMsgTs)).forEach(d => { const x = d.data(); rows.push(row(
+          h('div',{}, h('b',{}, x.name || 'DM'), x.postAdminOnly ? '（書き込み禁止）' : '', small('ID ' + d.id + '｜' + (x.members || []).length + '人｜最終 ' + when(x.lastMsgTs) + '｜作成 ' + nameOf(x.createdBy))),
+          h('div',{style:'display:grid;gap:4px'},
+            x.name ? sb('名前変更','ghost',async()=>{ const n = prompt('新しいルーム名', x.name); if (!n || !n.trim()) return; await updateDoc(d.ref,{name:n.trim()}).then(()=>{ logAdmin('ルーム名変更', x.name, n.trim()); draw(); }).catch(()=>toast('変更できませんでした')); }) : null,
+            x.name ? sb(x.postAdminOnly ? '禁止を解除' : '書き込み禁止','ghost',()=>updateDoc(d.ref,{postAdminOnly:!x.postAdminOnly}).then(()=>{ logAdmin(x.postAdminOnly ? '書き込み禁止の解除' : '書き込み禁止', x.name); draw(); }).catch(()=>toast('変更できませんでした'))) : null,
+            sb('削除','danger',async()=>{ await removeRoom({id:d.id, col:'rooms', ...x}); logAdmin('ルーム削除', x.name || d.id); draw(); })))); });
+      } else if (tab === 'reports'){
+        rows.push(h('div',{style:'margin-bottom:6px'}, sb(showDone ? '未対応を見る' : '対応済みを見る','ghost',()=>{ showDone = !showDone; draw(); })));
+        const sn = await getDocs(collection(db,'reports'));
+        sn.docs.filter(d => (d.data().status === 'done') === showDone).sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).forEach(d => { const x = d.data(); rows.push(row(
+          h('div',{}, h('b',{}, nameOf(x.fromUid) + ' の発言'), '（' + x.roomName + '）', small(x.text), small('通報者 ' + nameOf(x.byUid) + '｜' + when(x.ts) + (x.note ? '｜対応メモ：' + x.note : ''))),
+          h('div',{style:'display:grid;gap:4px'}, x.status === 'done' ? sb('未対応に戻す','ghost',()=>updateDoc(d.ref,{status:'open'}).then(draw)) : sb('対応済み','ghost',()=>{ const n = prompt('対応メモ（空でもOK）', ''); if (n === null) return; updateDoc(d.ref,{status:'done', note:n, doneAt:serverTimestamp()}).then(()=>{ logAdmin('通報を対応済み', nameOf(x.fromUid), n); draw(); }); }), sb('送信者を停止','danger',() => ban({uid:x.fromUid, name:nameOf(x.fromUid)}, true))))); });
+        if (rows.length < 2) rows.push(h('div',{class:'empty'},'ありません'));
+      } else if (tab === 'log'){
+        const sn = await getDocs(collection(db,'adminLog'));
+        sn.docs.sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).slice(0,100).forEach(d => { const x = d.data(); rows.push(row(h('div',{}, h('b',{}, x.action), small(when(x.ts) + '｜' + nameOf(x.by) + '｜' + (x.target || '') + (x.note ? '｜' + x.note : ''))))); });
+        if (!rows.length) rows.push(h('div',{class:'empty'},'まだ記録はありません'));
+      } else {
+        const sn = await getDoc(doc(db,'config','announce')), ta = h('textarea',{class:'field',rows:'4',placeholder:'全員の画面の上に出す、お知らせ'}); ta.value = sn.exists() ? (sn.data().text || '') : '';
+        const save = t => setDoc(doc(db,'config','announce'), {text:t, updatedAt:serverTimestamp()}).then(()=>{ logAdmin('お知らせ', '', t); toast(t ? 'お知らせを出しました' : 'お知らせを消しました'); }).catch(()=>toast('保存できませんでした'));
+        rows.push(ta, h('div',{style:'display:flex;gap:8px;margin-top:8px'}, sb('出す','',()=>save(ta.value.trim())), sb('消す','ghost',()=>{ ta.value = ''; save(''); })), small('アプリを開いたときに、画面の上に出ます。×で閉じた人には、同じ内容は、もう出ません。'));
+      }
+      list.replaceChildren(...rows.filter(Boolean));
+    } catch(e){ console.error(e); list.replaceChildren(h('div',{class:'empty'},'読み込めませんでした（ルールを確認してください）')); }
+  };
+  modal('管理パネル', [tabs, search, list]); draw();
+}
+
+/* ---------- v3.6: forward / schedule / mini games ---------- */
+let schedT;
+async function sendTo(r, data, preview){
+  await addDoc(msgCol(r), {author:me.uid, ts:serverTimestamp(), readBy:[me.uid], reactions:{}, ...data});
+  updateDoc(roomRef(r), {lastMsg:String(preview).slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, lastMentions:[]}).catch(()=>{});
+}
+function forwardMsg(m){
+  const picks = new Set(), text = '↪ 転送（' + nameOf(m.author) + '）\n' + m.text;
+  const box = h('div',{style:'display:grid;gap:4px;max-height:50vh;overflow:auto'}, Object.values(rooms).map(t => h('label',{style:'display:flex;gap:8px;align-items:center;padding:6px 2px'}, h('input',{type:'checkbox',onchange:e=>{ e.target.checked ? picks.add(t.id) : picks.delete(t.id); }}), roomTitle(t))));
+  const close = modal('転送', [box, h('button',{class:'btn',onclick:async()=>{
+    if (!picks.size) return toast('送り先を選んでください');
+    close();
+    try { for (const id of picks) await sendTo(rooms[id], {text}, '↪ ' + m.text); toast('転送しました'); } catch(e){ console.error(e); toast('転送できませんでした'); }
+  }}, '転送する')]);
+}
+const getSched = () => { try { return JSON.parse(localStorage.getItem('cs_sched') || '[]'); } catch(e){ return []; } };
+const putSched = a => localStorage.setItem('cs_sched', JSON.stringify(a));
+async function runSched(){
+  if (!me) return;
+  const now = Date.now(), due = getSched().filter(x => x.uid === me.uid && x.at <= now && rooms[x.rid]);
+  if (!due.length) return;
+  putSched(getSched().filter(x => !due.some(d => d.id === x.id)));
+  for (const x of due){ try { await sendTo(rooms[x.rid], {text:x.text}, x.text); } catch(e){ toast('時間指定のメッセージを送れませんでした'); } }
+}
+function scheduleModal(){
+  const r = rooms[cur]; if (!r) return;
+  const ta = h('textarea',{class:'field',rows:'3',placeholder:'送るメッセージ'});
+  const dt = h('input',{class:'field',type:'datetime-local'});
+  const d0 = new Date(Date.now() + 3600e3); d0.setMinutes(d0.getMinutes() - d0.getTimezoneOffset()); dt.value = d0.toISOString().slice(0,16);
+  const list = h('div',{style:'display:grid;gap:6px;margin-top:10px'});
+  const fmt = t => new Date(t).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const draw = () => list.replaceChildren(...getSched().filter(x => x.uid === me.uid).sort((a,b) => a.at - b.at).map(x => h('div',{style:'display:flex;gap:8px;justify-content:space-between;align-items:center;font-size:13px'},
+    h('span',{}, fmt(x.at) + ' → ' + (rooms[x.rid] ? roomTitle(rooms[x.rid]) : '（不明）') + '：' + x.text.slice(0,20)),
+    h('button',{class:'btn ghost',style:'padding:3px 10px;font-size:12px',onclick:()=>{ putSched(getSched().filter(y => y.id !== x.id)); draw(); }}, '取り消し'))));
+  const go = h('button',{class:'btn',onclick:()=>{
+    const text = ta.value.trim(), at = new Date(dt.value).getTime();
+    if (!text) return toast('メッセージを入力してください');
+    if (isNaN(at) || at <= Date.now()) return toast('未来の日時を選んでください');
+    putSched([...getSched(), {id:Date.now() + '-' + Math.random().toString(36).slice(2,6), uid:me.uid, rid:r.id, text, at}]);
+    ta.value = ''; toast('予約しました'); draw();
+  }}, '予約する');
+  modal('時間指定メッセージ（' + roomTitle(r) + '）', [ta, dt, h('div',{style:'margin-top:8px'}, go), h('p',{style:'font-size:12px;opacity:.7'},'予約は、この端末のアプリを開いている間に送られます。閉じている間に時間が過ぎたら、次に開いたときに送られます。'), list]);
+  draw();
+}
+const HANDS = {g:'✊', c:'✌️', p:'✋'}, BEATS = {g:'c', c:'p', p:'g'};
+const GAMES = {rps:'じゃんけん', dice:'サイコロ', ttt:'○×ゲーム', gomoku:'五目並べ'};
+function newGame(kind){
+  if (kind === 'dice') return {kind, v:1 + Math.floor(Math.random()*6)};
+  if (kind === 'rps') return {kind, picks:{}, open:false};
+  const n = kind === 'ttt' ? 3 : 13;
+  return {kind, n, k:kind === 'ttt' ? 3 : 5, b:'.'.repeat(n*n), x:null, o:null, turn:'x', win:null};
+}
+async function createGame(kind){
+  const r = rooms[cur]; if (!r) return;
+  try { await sendTo(r, {text:'🎮 ' + GAMES[kind], game:newGame(kind)}, '🎮 ' + GAMES[kind]); } catch(e){ console.error(e); toast('ゲームを作れませんでした'); }
+}
+function gameModal(){
+  const close = modal('ミニゲーム', [h('div',{style:'display:grid;gap:8px'}, Object.entries(GAMES).map(([k,l]) => h('button',{class:'btn ghost',onclick:()=>{ close(); createGame(k); }}, l)))]);
+}
+function fiveWin(b, n, k, i){
+  const c = b[i], x = i % n, y = Math.floor(i / n);
+  for (const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]){
+    let cnt = 1;
+    for (const s of [1,-1]) for (let t = 1;; t++){ const px = x + dx*t*s, py = y + dy*t*s; if (px < 0 || py < 0 || px >= n || py >= n || b[py*n+px] !== c) break; cnt++; }
+    if (cnt >= k) return true;
+  }
+  return false;
+}
+function gameView(id, m){
+  const r = rooms[cur], g = m.game; if (!r || !g) return h('span',{},'ゲーム');
+  const ref = doc(msgCol(r), id);
+  const save = patch => updateDoc(ref, {game:{...g, ...patch}}).catch(() => toast('操作できませんでした'));
+  const btn = (label, fn, cls) => h('button',{class:'btn '+(cls ?? 'ghost'),style:'padding:5px 12px;font-size:13px',onclick:ev=>{ ev.stopPropagation(); fn(); }}, label);
+  const box = h('div',{style:'display:grid;gap:8px;min-width:200px'}, h('b',{}, '🎮 ' + GAMES[g.kind]));
+  if (g.kind === 'dice'){
+    box.append(h('div',{style:'font-size:44px;text-align:center'}, '⚀⚁⚂⚃⚄⚅'[g.v-1] + ' ' + g.v), btn('ふる', () => save({v:1 + Math.floor(Math.random()*6)})));
+  } else if (g.kind === 'rps'){
+    const picks = g.picks || {}, n = Object.keys(picks).length;
+    if (!g.open){
+      box.append(h('div',{style:'display:flex;gap:8px;justify-content:center'}, Object.entries(HANDS).map(([k,e]) => h('button',{class:'btn '+(picks[me.uid] === k ? '' : 'ghost'),style:'font-size:24px;padding:6px 14px',onclick:ev=>{ ev.stopPropagation(); save({picks:{...picks, [me.uid]:k}}); }}, e))), h('div',{style:'font-size:13px;text-align:center'}, n + '人が選びました'));
+      if (m.author === me.uid && n >= 2) box.append(btn('オープン', () => save({open:true}), ''));
+    } else {
+      const set = new Set(Object.values(picks)), win = set.size === 2 ? [...set].find(k => set.has(BEATS[k])) : null;
+      box.append(...Object.entries(picks).map(([u,k]) => h('div',{}, nameOf(u) + '：' + HANDS[k] + (win === k ? ' 🏆' : ''))), h('b',{}, win ? '勝ち：' + Object.entries(picks).filter(([,k]) => k === win).map(([u]) => nameOf(u)).join('、') : 'あいこ'));
+    }
+  } else {
+    const ttt = g.kind === 'ttt', cs = ttt ? 56 : 24, mark = {x:ttt ? '✕' : '●', o:'○'};
+    const seat = s => g[s] ? nameOf(g[s]) : '（待ち）';
+    const play = i => {
+      if (g.win || g.b[i] !== '.') return;
+      const s = g.turn, other = s === 'x' ? 'o' : 'x';
+      if ((g[s] && g[s] !== me.uid) || (!g[s] && g[other] === me.uid)) return toast('相手の番です');
+      const b = g.b.slice(0,i) + s + g.b.slice(i+1);
+      save({b, [s]:me.uid, turn:other, win:fiveWin(b, g.n, g.k, i) ? s : (b.includes('.') ? null : 'draw')});
+    };
+    const grid = h('div',{style:'display:grid;grid-template-columns:repeat('+g.n+','+cs+'px);gap:2px'});
+    for (let i = 0; i < g.n*g.n; i++) grid.append(h('button',{style:'width:'+cs+'px;height:'+cs+'px;border-radius:6px;background:var(--hover);font-size:'+Math.round(cs*0.6)+'px;line-height:1','aria-label':'マス',onclick:ev=>{ ev.stopPropagation(); play(i); }}, g.b[i] === '.' ? '' : mark[g.b[i]]));
+    box.append(h('div',{style:'font-size:13px'}, mark.x + ' ' + seat('x') + '　' + mark.o + ' ' + seat('o')), h('div',{style:'overflow:auto'}, grid),
+      g.win ? h('b',{}, g.win === 'draw' ? '引き分け' : nameOf(g[g.win]) + ' の勝ち！') : h('div',{style:'font-size:13px'}, mark[g.turn] + ' の番'));
+  }
+  return box;
+}
+
+/* ---------- v3.7: prefs / memo / rename / readers / draw / sort ---------- */
+let prefs = {};
+const prefsRef = () => doc(db,'users',me.uid,'private','prefs');
+async function loadPrefs(){ try { const sn = await getDoc(prefsRef()); prefs = sn.exists() ? sn.data() : {}; } catch(e){ prefs = {}; } }
+function setPrefs(patch){ prefs = {...prefs, ...patch}; setDoc(prefsRef(), patch, {merge:true}).catch(()=>{}); renderRooms(); }
+const hidingRead = () => !!(prefs.hideRead || {})[cur];
+function toggleHideRead(){
+  const v = !hidingRead(), id = cur;
+  prefs.hideRead = {...(prefs.hideRead || {}), [id]: v};
+  setDoc(prefsRef(), {hideRead:{[id]:v}}, {merge:true}).catch(()=>{});
+  document.body.classList.toggle('hide-read', v);
+  toast(v ? 'このルームでは既読を見せません（相手の既読も見えません）' : '既読を見せるようにしました');
+}
+const lastT = r => ms(r.lastMsgTs) || ms(r.createdAt);
+const isUnreadRoom = r => r.id !== cur && r.lastUid && r.lastUid !== me.uid && ms(r.lastMsgTs) > (readMap[r.id] || 0);
+function roomSorter(){
+  const pin = prefs.pinned || [], mode = prefs.sort || 'recent', ord = prefs.order || [];
+  return (a,b) => {
+    const pa = pin.includes(a.id), pb = pin.includes(b.id); if (pa !== pb) return pa ? -1 : 1;
+    if (mode === 'name') return roomTitle(a).localeCompare(roomTitle(b), 'ja');
+    if (mode === 'unread'){ const ua = isUnreadRoom(a), ub = isUnreadRoom(b); if (ua !== ub) return ua ? -1 : 1; }
+    if (mode === 'manual'){ const ia = ord.indexOf(a.id), ib = ord.indexOf(b.id); if (ia !== ib) return (ia < 0 ? 9999 : ia) - (ib < 0 ? 9999 : ib); }
+    return lastT(b) - lastT(a);
+  };
+}
+function sortModal(){
+  const box = h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'}), list = h('div',{style:'display:grid;gap:2px;max-height:45vh;overflow:auto;margin-top:8px'});
+  const mini = (l, fn) => h('button',{class:'btn ghost',style:'padding:2px 9px;font-size:12px',onclick:fn}, l);
+  const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; const ids = arr.map(r => r.id); [ids[i], ids[j]] = [ids[j], ids[i]]; setPrefs({sort:'manual', order:ids}); draw(); };
+  const draw = () => {
+    box.replaceChildren(...[['recent','新しい順'],['unread','未読を上に'],['name','名前順'],['manual','自分で並べる']].map(([k,l]) => h('button',{class:'btn '+((prefs.sort || 'recent') === k ? '' : 'ghost'),style:'padding:5px 12px;font-size:13px',onclick:()=>{ setPrefs({sort:k}); draw(); }}, l)));
+    const arr = Object.values(rooms).sort(roomSorter()), pin = prefs.pinned || [];
+    list.replaceChildren(...arr.map((r,i) => h('div',{style:'display:flex;gap:6px;align-items:center;justify-content:space-between;padding:4px 2px;border-bottom:1px solid var(--line)'},
+      h('span',{}, (pin.includes(r.id) ? '📌 ' : '') + roomTitle(r)),
+      h('span',{style:'display:flex;gap:4px'}, mini(pin.includes(r.id) ? '固定解除' : '固定', ()=>{ setPrefs({pinned: pin.includes(r.id) ? pin.filter(x => x !== r.id) : [...pin, r.id]}); draw(); }), mini('↑', ()=>move(arr,i,-1)), mini('↓', ()=>move(arr,i,1))))));
+  };
+  modal('ルームの並べ替え', [box, list]); draw();
+}
+const memoCache = {};
+async function drawMemoBar(id){
+  const bar = $('#memoBar'); if (!bar) return;
+  if (memoCache[id] === undefined){ try { const sn = await getDoc(doc(db,'users',me.uid,'memos',id)); memoCache[id] = sn.exists() ? (sn.data().text || '') : ''; } catch(e){ memoCache[id] = ''; } }
+  if (cur !== id) return;
+  const t = memoCache[id];
+  bar.replaceChildren(...(t ? [h('button',{style:'display:block;width:100%;text-align:left;padding:6px 14px;background:var(--hover);border:0;border-bottom:1px solid var(--line);font-size:13px;color:inherit;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis',onclick:()=>memoModal(rooms[id])}, '📝 ' + t.replace(/\n/g,' '))] : []));
+}
+function memoModal(r){
+  if (!r) return;
+  const ta = h('textarea',{class:'field',rows:'8',placeholder:'このルームのメモ（自分だけに見えます）'}); ta.value = memoCache[r.id] || '';
+  const close = modal('メモ（' + roomTitle(r) + '）', [ta, h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:async()=>{
+    const text = ta.value.trim(); close();
+    try { const ref = doc(db,'users',me.uid,'memos',r.id); if (text) await setDoc(ref, {text, updatedAt:serverTimestamp()}); else await deleteDoc(ref); memoCache[r.id] = text; drawMemoBar(r.id); toast('メモを保存しました'); } catch(e){ toast('保存できませんでした'); }
+  }}, '保存'))]);
+}
+function renameRoom(r){
+  const inp = h('input',{class:'field',value:r.name || '',maxlength:'40'});
+  const close = modal('ルーム名を変更', [inp, h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:async()=>{
+    const name = inp.value.trim(); close(); if (!name || name === r.name) return;
+    try { await updateDoc(roomRef(r), {name}); await sysMsg(r, nameOf(me.uid) + 'さんがルーム名を「' + name + '」に変更しました'); toast('ルーム名を変更しました'); } catch(e){ toast('変更できませんでした'); }
+  }}, '保存'))]);
+}
+function readersModal(r, m){
+  const read = (m.readBy || []).filter(u => u !== m.author), unread = (r.members || []).filter(u => u !== m.author && !read.includes(u));
+  const sec = (t, a) => h('div',{style:'margin-bottom:10px'}, h('b',{}, t + '（' + a.length + '人）'), h('div',{style:'font-size:14px;margin-top:4px'}, a.length ? a.map(nameOf).join('、') : 'いません'));
+  modal('既読', [sec('読んだ人', read), sec('まだ読んでいない人', unread)]);
+}
+function reactorsModal(m){
+  modal('リアクションした人', Object.entries(m.reactions || {}).filter(([,l]) => l && l.length).map(([e,l]) => h('div',{style:'padding:6px 0;border-bottom:1px solid var(--line)'}, h('span',{style:'font-size:20px;margin-right:8px'}, e), l.map(nameOf).join('、'))));
+}
+function drawModal(){
+  const W = 600, H = 420, cv = h('canvas',{width:String(W),height:String(H),style:'width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;touch-action:none'});
+  const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,W,H); cx.lineCap = 'round'; cx.lineJoin = 'round';
+  let color = '#111', size = 5, eraser = false, drawing = false, last = null; const undo = [];
+  const snap = () => { undo.push(cx.getImageData(0,0,W,H)); if (undo.length > 20) undo.shift(); };
+  const pos = e => { const b = cv.getBoundingClientRect(); return {x:(e.clientX - b.left)*W/b.width, y:(e.clientY - b.top)*H/b.height}; };
+  const line = (a,b) => { cx.strokeStyle = eraser ? '#fff' : color; cx.lineWidth = eraser ? size*3 : size; cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y); cx.stroke(); };
+  cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); snap(); drawing = true; last = pos(e); line(last,last); };
+  cv.onpointermove = e => { if (!drawing) return; const p = pos(e); line(last,p); last = p; };
+  cv.onpointerup = cv.onpointercancel = () => { drawing = false; };
+  const colors = ['#111111','#e53935','#fb8c00','#fdd835','#43a047','#1e88e5','#8e24aa'];
+  const cb = colors.map(c => h('button',{'aria-label':'色',style:'width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:'+c,onclick:()=>{ color = c; eraser = false; }}));
+  const tb = (l, fn) => h('button',{class:'btn ghost',style:'padding:4px 10px;font-size:13px',onclick:fn}, l);
+  const close = modal('お絵描き', [cv, h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px'}, ...cb),
+    h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px'}, tb('細',()=>{ size = 2; eraser = false; }), tb('中',()=>{ size = 5; eraser = false; }), tb('太',()=>{ size = 12; eraser = false; }), tb('消しゴム',()=>{ eraser = true; }), tb('戻す',()=>{ const x = undo.pop(); if (x) cx.putImageData(x,0,0); }), tb('全部消す',()=>{ snap(); cx.fillStyle = '#fff'; cx.fillRect(0,0,W,H); })),
+    h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:()=>{ cv.toBlob(b => { close(); sendImage(new File([b],'drawing.png',{type:'image/png'})); }, 'image/png'); }}, '送信'))]);
+}
+
+/* ---------- room list ---------- */
+function renderRooms(){
+  const list = $('#roomList'); if (!list) return;
+  const arr = Object.values(rooms).filter(r => listFilter==='all' || (listFilter==='dm') === isDm(r))
+    .sort(roomSorter());
+  list.replaceChildren();
+  if (!arr.length){ list.append(h('div',{class:'empty'},'ここにはまだ何もありません。',h('br'),'「ルーム」から作成・参加、または「DM」で友だちに話しかけましょう。')); return; }
+  for (const r of arr){
+    const title = roomTitle(r), other = isDm(r) ? otherUid(r) : null;
+    const unread = r.id !== cur && r.lastUid && r.lastUid !== me.uid && ms(r.lastMsgTs) > (readMap[r.id] || 0);
+    list.append(h('button',{class:'room'+(r.id===cur?' active':'')+(unread?' unread':''),onclick:()=>openRoom(r.id)},
+      avatar(other || r.createdBy || r.id, title, false, other && isOnline(other)),
+      h('div',{class:'meta'},
+        h('div',{class:'top'}, h('div',{class:'name'},title), h('div',{class:'time'},fmtList(r.lastMsgTs))),
+        h('div',{class:'last'}, r.lastMsg || (isDm(r) ? 'メッセージを送ってみましょう' : (r.desc || 'ルームID: '+r.id)))),
+      unread ? h('span',{class:'dot','aria-label':'未読'}) : null));
+  }
+}
+
+/* ---------- chat pane ---------- */
+function openRoom(id){
+  if (!rooms[id]) return;
+  if (cur === id){ document.body.classList.add('in-chat'); return; }
+  unsubMsgs?.(); pendingRead.clear(); replyTo = null;
+  cur = id; readMap[id] = Date.now(); saveRead();
+  document.body.classList.add('in-chat');
+  $('#main').replaceChildren(
+    h('div',{class:'chat-head',id:'chatHead'}),
+    h('div',{id:'pinBar'}),
+    h('div',{id:'memoBar'}),
+    h('div',{class:'msgs',id:'msgs'}),
+    h('div',{class:'hint',id:'chatEmpty',hidden:true},'まだメッセージはありません。最初の一言を送ってみましょう。'),
+    composer());
+  renderHeader(); renderRooms();
+  document.body.classList.toggle('hide-read', hidingRead()); drawMemoBar(id);
+  subscribeMessages(id);
+}
+function closeRoom(){
+  unsubMsgs?.(); unsubMsgs = null; cur = null; pendingRead.clear(); replyTo = null;
+  document.body.classList.remove('in-chat');
+  $('#main')?.replaceChildren(welcome());
+  renderRooms();
+}
+function renderHeader(){
+  const head = $('#chatHead'); const r = rooms[cur]; if (!head || !r) return;
+  const other = isDm(r) ? otherUid(r) : null;
+  const typing = Object.entries(r.typing || {}).filter(([u,t]) => u !== me.uid && Date.now() - ms(t) < 4000).map(([u]) => nameOf(u));
+  let sub, cls = 's';
+  if (typing.length){ sub = typing.join('、') + 'が入力中…'; cls += ' typing'; clearTimeout(typingTimer); typingTimer = setTimeout(renderHeader, 4200); }
+  else if (isDm(r)) sub = isOnline(other) ? 'オンライン' : 'オフライン';
+  else sub = (r.members||[]).length + '人のメンバー' + (r.desc ? '・' + r.desc : '');
+  head.replaceChildren(
+    h('button',{class:'icon-btn back','aria-label':'一覧に戻る',onclick:()=>document.body.classList.remove('in-chat')}, ico('back')),
+    avatar(other || r.createdBy || r.id, roomTitle(r), true, other && isOnline(other)),
+    h('div',{class:'titles'}, h('div',{class:'t'},roomTitle(r)), h('div',{class:cls},sub)),
+    h('button',{class:'icon-btn','aria-label':'通話',onclick:e => popup(e.currentTarget,[{icon:'phone',label:'音声通話',run:() => isDm(r) ? startCall(false) : groupCallAction(false)},{icon:'video',label:'ビデオ通話',run:() => isDm(r) ? startCall(true) : groupCallAction(true)}])}, ico('phone')),
+    h('button',{class:'icon-btn','aria-label':'検索',onclick:searchModal}, ico('search')),
+    h('button',{class:'icon-btn','aria-label':'ルームのメニュー',onclick:e=>roomMenu(e.currentTarget)}, ico('more')));
+  const pb = $('#pinBar');
+  if (pb){
+    const items = [];
+    if (!isDm(r) && r.callState === 'active' && r.callId && !gcall && Date.now() - ms(r.callTs) < 6 * 3600 * 1000)
+      items.push(h('button',{class:'callbar',onclick:() => groupCallAction(false)}, ico('phone',18), h('span',{},'グループ通話中です。タップして参加')));
+    if (r.pinnedMsg) items.push(h('div',{class:'pinbar',onclick:()=>jumpTo(r.pinnedMsgId)}, ico('pin',15), h('span',{},r.pinnedMsg)));
+    pb.replaceChildren(...items);
+  }
+}
+function jumpTo(id){
+  const el = curEls.get(id); if (!el) return toast('このメッセージは読み込まれていません');
+  el.scrollIntoView({block:'center'}); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+function roomMenu(anchor){
+  const r = rooms[cur]; if (!r) return;
+  const items = [];
+  items.push({icon:'user',label:hidingRead() ? '既読を見せる' : 'このルームでは既読を見せない',run:toggleHideRead});
+  items.push({icon:'memo',label:'このルームのメモ',run:()=>memoModal(r)});
+  if (!isDm(r)){
+    items.push({icon:'link',label:'共有リンクをコピー',run:()=>copy(location.origin+location.pathname+'?room='+r.id,'共有リンクをコピーしました')});
+    items.push({icon:'copy',label:'ルームIDをコピー（'+r.id+'）',run:()=>copy(r.id,'ルームIDをコピーしました')});
+    items.push({icon:'users',label:'メンバーを見る',run:()=>membersModal(r)});
+    if (isAdmin(r)) items.push({icon:'edit',label:'ルーム名を変更',run:()=>renameRoom(r)});
+    if (r.createdBy !== me.uid) items.push({icon:'logout',label:'ルームから退出',danger:true,run:()=>leaveRoom(r)});
+    if (isAdmin(r)) items.push({icon:'users',label:'メンバーを招待',run:()=>inviteModal(r)});
+    if (isAdmin(r)) items.push({icon:'image',label:r.imageAdminOnly ? '画像送信を全員に許可する' : '画像送信を管理者だけにする',run:()=>updateDoc(roomRef(r),{imageAdminOnly:!r.imageAdminOnly}).then(()=>toast(r.imageAdminOnly ? '画像送信を全員に許可しました' : '画像送信を管理者だけにしました')).catch(()=>toast('変更できませんでした'))});
+    if (isAdmin(r)) items.push({icon:'trash',label:'ルームを削除',danger:true,run:()=>removeRoom(r)});
+  } else items.push({icon:'trash',label:'このDMを削除',danger:true,run:()=>removeRoom(r)});
+  popup(anchor, items);
+}
+async function copy(t, ok){ try{ await navigator.clipboard.writeText(t); toast(ok); }catch(e){ prompt('コピーしてください', t); } }
+const isAdmin = (r, uid=me.uid) => r.createdBy === uid || (r.admins||[]).includes(uid);
+function membersModal(r0){
+  const body = h('div',{style:'display:grid;gap:4px'});
+  const btn = (label, cls, fn) => h('button',{class:'btn '+cls,style:'padding:5px 12px;font-size:13px',onclick:fn}, label);
+  const draw = () => {
+    const r = rooms[r0.id] || r0;
+    const iAmCreator = r.createdBy === me.uid, iAmAdmin = isAdmin(r);
+    body.replaceChildren(...(r.members||[]).map(u => {
+      const creator = u === r.createdBy, admin = isAdmin(r, u);
+      const label = (creator ? '作成者' : admin ? '管理者' : '') + (isOnline(u) ? (admin?'・':'')+'オンライン' : (admin?'・':'')+'オフライン');
+      const acts = [];
+      if (iAmCreator && !creator) acts.push(btn(admin ? '管理者を外す' : '管理者にする', 'ghost', async()=>{
+        try {
+          await updateDoc(roomRef(r), {admins: admin ? arrayRemove(u) : arrayUnion(u)});
+          await sysMsg(r, nameOf(u) + (admin ? 'の管理者権限を外しました' : 'を管理者にしました')).catch(()=>{});
+          setTimeout(draw, 400);
+        } catch(e){ toast('変更できませんでした'); }
+      }));
+      if (iAmAdmin && u !== me.uid && !creator && (iAmCreator || !admin)) acts.push(btn('BAN', 'danger', () => banMember(r, u, draw)));
+      return h('div',{class:'urow'}, avatar(u, nameOf(u), true, isOnline(u)),
+        h('div',{class:'n'}, nameOf(u), h('small',{}, label)),
+        acts.length ? h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end'}, acts) : null);
+    }));
+    const banned = r.banned || [];
+    if (iAmAdmin && banned.length){
+      body.append(h('div',{style:'margin-top:10px;font-weight:700;font-size:13px;color:var(--sub)'},'BANしたメンバー'),
+        ...banned.map(u => h('div',{class:'urow'}, avatar(u, nameOf(u), true, false), h('div',{class:'n'}, nameOf(u)),
+          btn('解除', 'ghost', async()=>{ try { await updateDoc(roomRef(r), {banned: arrayRemove(u)}); toast('BANを解除しました'); setTimeout(draw, 400); } catch(e){ toast('解除できませんでした'); } }))));
+    }
+    if (iAmAdmin) body.append(h('p',{style:'font-size:12px;color:var(--sub);margin-top:8px'},'管理者は、ルームの削除とメンバーのBANができます。管理者を決められるのは作成者だけです。'));
+  };
+  draw();
+  modal('メンバー', body);
+}
+async function banMember(r, u, redraw){
+  if (!(await confirmBox('メンバーをBAN', nameOf(u) + 'さんをこのルームから外して、もう入れないようにします。', 'BANする'))) return;
+  try {
+    await sysMsg(r, nameOf(u) + 'がBANされました').catch(()=>{});
+    const upd = {members: arrayRemove(u), banned: arrayUnion(u)};
+    if ((r.admins||[]).includes(u)) upd.admins = arrayRemove(u);
+    await updateDoc(roomRef(r), upd);
+    toast('BANしました'); setTimeout(redraw, 500);
+  } catch(e){ console.error(e); toast('BANできませんでした（Firestoreのルールを確認してください）'); }
+}
+async function sysMsg(r, text){ await addDoc(msgCol(r), {type:'system', text, ts:serverTimestamp(), readBy:[], reactions:{}}); }
+
+async function removeRoom(r){
+  const dm = isDm(r);
+  if (!(await confirmBox(dm ? 'DMを削除' : 'ルームを削除', dm ? 'このDMの履歴がすべて消えます。相手側からも消えます。' : 'ルームとメッセージがすべて消えます。メンバー全員から見えなくなります。', '削除する'))) return;
+  if (cur === r.id) closeRoom();
+  try {
+    for (const sub of ['messages','images','calls']){
+      for (;;){
+        const sn = await getDocs(query(collection(db, r.col, r.id, sub), limit(100)));
+        if (sn.empty) break;
+        const b = writeBatch(db); sn.docs.forEach(d => b.delete(d.ref)); await b.commit();
+      }
+    }
+    await deleteDoc(roomRef(r));
+    toast('削除しました');
+  } catch(e){ console.error(e); toast('削除できませんでした（ルールの設定を確認してください）'); }
+}
+async function leaveRoom(r){
+  if (!(await confirmBox('ルームから退出', '「'+roomTitle(r)+'」から退出します。ルームIDがあれば、またいつでも入れます。', '退出する'))) return;
+  if (cur === r.id) closeRoom();
+  try { await sysMsg(r, myName()+'が退出しました').catch(()=>{}); await updateDoc(roomRef(r), {members: arrayRemove(me.uid)}); toast('退出しました'); }
+  catch(e){ console.error(e); toast('退出できませんでした'); }
+}
+
+/* ---------- messages (incremental rendering) ---------- */
+function subscribeMessages(id){
+  const r0 = rooms[id];
+  const els = curEls = new Map(); msgCache = new Map();
+  let first = true;
+  const q = query(msgCol(r0), orderBy('ts','asc'), limitToLast(300));
+  unsubMsgs = onSnapshot(q, snap => {
+    if (cur !== id) return;
+    const box = $('#msgs'); if (!box) return;
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 140;
+    let mineAdded = false;
+    snap.docChanges().forEach(ch => {
+      const mid = ch.doc.id, m = ch.doc.data({serverTimestamps:'estimate'});
+      if (ch.type === 'removed'){ els.get(mid)?.remove(); els.delete(mid); msgCache.delete(mid); pendingRead.delete(mid); return; }
+      msgCache.set(mid, m);
+      if (ch.type === 'modified' && ch.oldIndex === ch.newIndex && els.get(mid)){
+        const open = els.get(mid).classList.contains('open');
+        const el = msgEl(mid, m); if (open) el.classList.add('open');
+        els.get(mid).replaceWith(el); els.set(mid, el);
+      } else {
+        els.get(mid)?.remove();
+        const el = msgEl(mid, m); els.set(mid, el);
+        box.insertBefore(el, box.children[ch.newIndex] || null);
+        if (ch.type === 'added' && m.author === me.uid) mineAdded = true;
+      }
+      if (m.type !== 'system' && m.author !== me.uid && !(m.readBy||[]).includes(me.uid)) pendingRead.add(mid);
+    });
+    const empty = $('#chatEmpty'); if (empty) empty.hidden = box.children.length > 0;
+    if (first || nearBottom || mineAdded) box.scrollTop = box.scrollHeight;
+    first = false;
+    readMap[id] = Date.now(); saveRead();
+    flushRead();
+  }, e => { console.error('msgs', e); toast('メッセージを読み込めません'); });
+}
+async function flushRead(){
+  const r = rooms[cur];
+  if (!inFocus() || !r || !pendingRead.size) return;
+  const ids = [...pendingRead]; pendingRead.clear();
+  if (hidingRead()) return;
+  try {
+    const b = writeBatch(db);
+    ids.forEach(mid => b.update(doc(db, r.col, r.id, 'messages', mid), {readBy: arrayUnion(me.uid)}));
+    await b.commit();
+  } catch(e){ /* a message may have vanished */ }
+}
+function linkify(t){
+  const out = []; const re = /(https?:\/\/[^\s<]+)/g; let last = 0, m;
+  while ((m = re.exec(t))){
+    if (m.index > last) out.push(t.slice(last, m.index));
+    out.push(h('a',{href:m[1],target:'_blank',rel:'noopener noreferrer'},m[1]));
+    last = m.index + m[0].length;
+  }
+  if (last < t.length) out.push(t.slice(last));
+  return out;
+}
+function msgEl(id, m){
+  if (m.type === 'system') return h('div',{class:'sys','data-id':id}, m.text);
+  const mine = m.author === me.uid, r = rooms[cur];
+  const el = h('div',{class:'msg'+(mine?' mine':''),'data-id':id});
+  if (!mine && r && !isDm(r)) el.append(h('div',{class:'who'}, nameOf(m.author)));
+  if (m.replyToText && !m.deleted) el.append(h('div',{class:'quote'}, m.replyToText));
+  const toggle = () => {
+    if (m.deleted) return;
+    document.querySelectorAll('.msg.open').forEach(x => x !== el && x.classList.remove('open'));
+    el.classList.toggle('open');
+  };
+  const stamp = m.stamp && !m.deleted;
+  const pic = !m.deleted && m.hasImage && typeof m.image === 'string' && m.image.startsWith('data:image/');
+  const isPoll = !m.deleted && m.poll && Array.isArray(m.poll.options);
+  const toMe = !m.deleted && (m.mentions || []).includes(me.uid);
+  el.append(h('div',{class:'bubble'+(stamp?' stamp':'')+(pic?' imgb':'')+(m.deleted?' deleted':'')+(toMe?' mentioned':''),title:m.ts?new Date(ms(m.ts)).toLocaleString('ja-JP'):'',onclick:toggle},
+    m.deleted ? 'メッセージは削除されました' : isPoll ? pollView(id, m) : (!m.deleted && m.game) ? gameView(id, m) : pic ? h('img',{class:'pic',src:m.image,alt:'送信された画像（タップで拡大）',loading:'lazy',onclick:ev=>{ ev.stopPropagation(); openImage(r, id, m); }}) : stamp ? m.text : withMentions(linkify(m.text || ''), r)));
+  if (!m.deleted){
+    const rc = h('div',{class:'reacts'});
+    Object.entries(m.reactions || {}).forEach(([e, list]) => {
+      if (list && list.length) rc.append(h('button',{class:'chip'+(list.includes(me.uid)?' on':''),'aria-label':'リアクション '+e,title:list.map(nameOf).join('、'),onclick:()=>react(id,e,list.includes(me.uid))}, e+' '+list.length));
+    });
+    if (rc.children.length) el.append(rc);
+    const act = (icon, label, fn, cls) => h('button',{class:cls||'','aria-label':label,title:label,onclick:ev=>{ ev.stopPropagation(); el.classList.remove('open'); fn(); }}, ico(icon,17));
+    const bar = h('div',{class:'bar'},
+      REACTIONS.map(e => h('button',{'aria-label':'リアクション '+e,onclick:ev=>{ ev.stopPropagation(); el.classList.remove('open'); react(id,e,(m.reactions?.[e]||[]).includes(me.uid)); }}, e)),
+      h('span',{class:'sp'}),
+      act('reply','返信',()=>setReply(id, m.hasImage ? '画像' : m.text)),
+      pic ? act('search','拡大',()=>openImage(r, id, m)) : null,
+      mine && !m.stamp && !m.hasImage && !isPoll && !m.game ? act('edit','編集',()=>editMsg(id,m)) : null,
+      r && !isDm(r) ? act('pin', r.pinnedMsgId===id ? 'ピン解除' : 'ピン留め',()=>togglePin(id,m)) : null,
+      Object.values(m.reactions||{}).some(l => l && l.length) ? act('users','リアクションした人',()=>reactorsModal(m)) : null,
+      !m.deleted && !m.hasImage && !isPoll && !m.game && m.text ? act('send','転送',()=>forwardMsg(m)) : null,
+      !mine && r ? act('x','通報',()=>reportMsg(r,id,m)) : null,
+      mine ? act('trash','削除',()=>deleteMsg(id),'del') : null);
+    el.append(bar);
+  }
+  const others = (m.readBy||[]).filter(u => u !== m.author).length;
+  el.append(h('div',{class:'info'}, pic ? h('button',{class:'imore','aria-label':'メニューを開く',onclick:toggle}, ico('more',16)) : null, fmtTime(m.ts), m.edited && !m.deleted ? '編集済み' : null, mine && others && !m.deleted ? h('span',{class:'rd'}, r && isDm(r) ? '既読' : h('button',{style:'background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer',onclick:ev=>{ ev.stopPropagation(); readersModal(r, m); }}, '既読 '+others)) : null));
+  return el;
+}
+function withMentions(parts, r){
+  const names = (r && !isDm(r) ? (r.members || []).map(nameOf) : []).filter(n => n && n !== '不明');
+  names.push('全員');
+  names.sort((a, b) => b.length - a.length);
+  const re = new RegExp('(@(?:' + names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '))', 'g');
+  return parts.flatMap(p => typeof p === 'string'
+    ? p.split(re).map((seg, i) => i % 2 ? h('span',{class:'mention'}, seg) : seg)
+    : [p]);
+}
+function findMentions(text, r){
+  if (!r || isDm(r)) return [];
+  const out = new Set();
+  if (text.includes('@全員')) (r.members || []).forEach(u => { if (u !== me.uid) out.add(u); });
+  (r.members || []).forEach(u => { const n = nameOf(u); if (u !== me.uid && n !== '不明' && text.includes('@' + n)) out.add(u); });
+  return [...out];
+}
+function pollView(id, m){
+  const p = m.poll, votes = m.votes || {};
+  const total = new Set(Object.values(votes).flat()).size;
+  const mine = m.author === me.uid;
+  return h('div',{class:'poll'},
+    h('div',{class:'pq'}, p.q),
+    ...p.options.map((o, i) => {
+      const list = votes['o' + i] || [], pct = total ? Math.round(list.length / total * 100) : 0, on = list.includes(me.uid);
+      return h('button',{class:'popt'+(on?' on':''),disabled:!!p.closed,'aria-label':o+' '+list.length+'票',onclick:ev=>{ ev.stopPropagation(); vote(id, m, i, on); }},
+        h('span',{class:'pbar',style:`width:${pct}%`}), h('span',{class:'ptxt'}, o), h('span',{class:'pcnt'}, list.length + '票'));
+    }),
+    h('div',{class:'pfoot'}, total + '人が投票' + (p.multi ? '・複数選択OK' : '') + (p.closed ? '・締め切り済み' : ''),
+      (!p.closed && mine) ? h('button',{class:'linklike',style:'font-size:12px',onclick:ev=>{ ev.stopPropagation(); updateDoc(mref(id), {'poll.closed':true}).catch(()=>toast('締め切れませんでした')); }},'締め切る') : null));
+}
+function vote(id, m, i, has){
+  const upd = {};
+  if (has) upd['votes.o' + i] = arrayRemove(me.uid);
+  else {
+    upd['votes.o' + i] = arrayUnion(me.uid);
+    if (!m.poll.multi) m.poll.options.forEach((_, j) => { if (j !== i) upd['votes.o' + j] = arrayRemove(me.uid); });
+  }
+  updateDoc(mref(id), upd).catch(()=>toast('投票できませんでした'));
+}
+const mref = id => doc(db, rooms[cur].col, cur, 'messages', id);
+function react(mid, e, has){ updateDoc(mref(mid), {['reactions.'+e]: has ? arrayRemove(me.uid) : arrayUnion(me.uid)}).catch(()=>toast('リアクションできませんでした')); }
+function editMsg(id, m){
+  const ta = h('textarea',{class:'field',rows:'4',style:'font-size:16px'}); ta.value = m.text;
+  let close;
+  close = modal('メッセージを編集', [ta, h('div',{style:'display:flex;gap:8px;justify-content:flex-end'},
+    h('button',{class:'btn ghost',onclick:()=>close()},'キャンセル'),
+    h('button',{class:'btn',onclick:async()=>{ const t = ta.value.trim(); if (!t) return; close(); try{ await updateDoc(mref(id),{text:t,edited:true}); }catch(e){ toast('編集できませんでした'); } }},'保存'))]);
+  setTimeout(()=>ta.focus(),50);
+}
+async function deleteMsg(id){
+  if (!(await confirmBox('メッセージを削除','このメッセージを削除しますか？','削除する'))) return;
+  try { await updateDoc(mref(id), {text:'(削除済み)', deleted:true, hasImage:false, hasFull:false, image:deleteField()}); deleteDoc(doc(db, rooms[cur].col, cur, 'images', id)).catch(()=>{}); } catch(e){ toast('削除できませんでした'); }
+}
+async function togglePin(id, m){
+  const r = rooms[cur]; const pinned = r.pinnedMsgId === id;
+  try {
+    await updateDoc(mref(id), {pinned: !pinned});
+    await updateDoc(roomRef(r), pinned ? {pinnedMsg:null, pinnedMsgId:null} : {pinnedMsg:m.text, pinnedMsgId:id});
+    toast(pinned ? 'ピン留めを外しました' : 'ピン留めしました');
+  } catch(e){ toast('ピン留めできませんでした'); }
+}
+function setReply(id, text){ replyTo = {id, text: String(text).slice(0,80)}; drawReply(); $('#msgInput')?.focus(); }
+function drawReply(){
+  const bar = $('#replyBar'); if (!bar) return;
+  bar.replaceChildren(...(replyTo ? [h('span',{}, '返信: ' + replyTo.text), h('button',{class:'icon-btn','aria-label':'返信をやめる',style:'width:28px;height:28px',onclick:()=>{ replyTo=null; drawReply(); }}, ico('x',16))] : []));
+  bar.hidden = !replyTo;
+}
+function searchModal(){
+  const q = h('input',{class:'field',placeholder:'このルームのメッセージを検索'});
+  const list = h('div',{});
+  let close;
+  const draw = () => {
+    const key = q.value.trim().toLowerCase();
+    if (!key){ list.replaceChildren(h('div',{class:'empty'},'キーワードを入力してください')); return; }
+    const hits = [...msgCache.entries()].filter(([,m]) => m.type !== 'system' && !m.deleted && (m.text||'').toLowerCase().includes(key)).sort((a,b)=>ms(b[1].ts)-ms(a[1].ts)).slice(0,40);
+    list.replaceChildren(...(hits.length ? hits.map(([id,m]) => h('button',{class:'hit',onclick:()=>{ close(); jumpTo(id); }}, h('small',{}, nameOf(m.author)+' ・ '+(ms(m.ts)?new Date(ms(m.ts)).toLocaleString('ja-JP'):'')), h('div',{},m.text))) : [h('div',{class:'empty'},'見つかりませんでした')]));
+  };
+  q.addEventListener('input', draw); draw();
+  close = modal('検索', [q, list]); setTimeout(()=>q.focus(),50);
+}
+
+/* ---------- composer ---------- */
+function composer(){
+  const ta = h('textarea',{id:'msgInput',rows:'1',placeholder:(rooms[cur]?.postAdminOnly && !isSiteAdmin()) ? '管理者だけが書き込めます' : 'メッセージを入力','aria-label':'メッセージ'});
+  const sendBtn = h('button',{class:'icon-btn send','aria-label':'送信',disabled:true}, ico('send'));
+  const panel = h('div',{class:'stamps',id:'stamps'});
+  const cats = Object.keys(STAMPS); let active = cats[0];
+  const drawPanel = () => panel.replaceChildren(
+    h('div',{class:'stab'}, cats.map(c => h('button',{class:c===active?'on':'',onclick:e=>{ e.stopPropagation(); active=c; drawPanel(); }}, c))),
+    h('div',{class:'sgrid'}, STAMPS[active].split(' ').map(s => h('button',{'aria-label':'スタンプ '+s,onclick:e=>{ e.stopPropagation(); doSend('stamp', s); panel.classList.remove('show'); }}, s))));
+  drawPanel();
+  const stampBtn = h('button',{class:'icon-btn',id:'stampBtn','aria-label':'スタンプ',onclick:e=>{ e.stopPropagation(); panel.classList.toggle('show'); }}, ico('smile',24));
+  const fileIn = h('input',{type:'file',accept:'image/*',hidden:true,onchange:e=>{ const f = e.target.files[0]; e.target.value=''; if (f) sendImage(f); }});
+  const imgBtn = h('button',{class:'icon-btn','aria-label':'画像を送る',onclick:()=>{ const r = rooms[cur]; if (r && !isDm(r) && r.imageAdminOnly && !isAdmin(r)) return toast('このルームでは、画像を送れるのは管理者だけです'); fileIn.click(); }}, ico('image',24));
+  ta.addEventListener('paste', e => { const f = [...(e.clipboardData?.files||[])].find(x => x.type.startsWith('image/')); if (f){ e.preventDefault(); sendImage(f); } });
+  const sug = h('div',{class:'sug',hidden:true});
+  let sugFirst = null;
+  const pickMention = (c, key) => {
+    const pos = ta.selectionStart, start = pos - key.length - 1;
+    ta.value = ta.value.slice(0, start) + '@' + c.name + ' ' + ta.value.slice(pos);
+    const np = start + c.name.length + 2; ta.setSelectionRange(np, np);
+    sug.hidden = true; sugFirst = null; fit(); ta.focus();
+  };
+  const updateSug = () => {
+    const r = rooms[cur];
+    if (!r || isDm(r)){ sug.hidden = true; return; }
+    const before = ta.value.slice(0, ta.selectionStart);
+    const mt = /(?:^|\s)@([^\s@]*)$/.exec(before);
+    if (!mt){ sug.hidden = true; sugFirst = null; return; }
+    const key = mt[1].toLowerCase();
+    const cands = [...(r.members || []).filter(u => u !== me.uid).map(u => ({uid:u, name:nameOf(u)})), {uid:'*', name:'全員'}]
+      .filter(c => c.name !== '不明' && c.name.toLowerCase().includes(key)).slice(0, 6);
+    if (!cands.length){ sug.hidden = true; sugFirst = null; return; }
+    sugFirst = {c:cands[0], key:mt[1]};
+    sug.replaceChildren(...cands.map((c, i) => h('button',{type:'button',class:i === 0 ? 'first' : '',onmousedown:e=>e.preventDefault(),onclick:()=>pickMention(c, mt[1])},
+      c.uid === '*' ? ico('users',20) : avatar(c.uid, c.name, true, false), '@' + c.name)));
+    sug.hidden = false;
+  };
+  const pollBtn = h('button',{class:'icon-btn','aria-label':'投票を作る',onclick:pollModal}, ico('poll',24));
+  const appsBtn = h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e => popup(e.currentTarget,[...(isGroupRoom ? [{icon:'poll',label:'投票',run:pollModal}] : []),{icon:'game',label:'ミニゲーム',run:gameModal},{icon:'clock',label:'時間指定',run:scheduleModal},{icon:'brush',label:'お絵描き',run:drawModal},{icon:'memo',label:'メモ',run:() => memoModal(rooms[cur])}])}, ico('grid9',24));
+  const gameBtn = h('button',{class:'icon-btn','aria-label':'ミニゲーム',onclick:gameModal}, ico('game',24));
+  const schedBtn = h('button',{class:'icon-btn','aria-label':'時間指定メッセージ',onclick:scheduleModal}, ico('clock',24));
+  const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,140) + 'px'; sendBtn.disabled = !ta.value.trim(); };
+  const submit = () => { const t = ta.value; if (!t.trim()) return; ta.value = ''; fit(); doSend('text', t); if (!isMobile) ta.focus(); };
+  ta.addEventListener('input', () => { fit(); sendTyping(); updateSug(); });
+  ta.addEventListener('click', updateSug);
+  ta.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === 'Tab') && !e.isComposing && !sug.hidden && sugFirst){ e.preventDefault(); pickMention(sugFirst.c, sugFirst.key); return; }
+    if (e.key === 'Escape') sug.hidden = true;
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isMobile){ e.preventDefault(); submit(); } });
+  ta.addEventListener('focus', () => panel.classList.remove('show'));
+  sendBtn.addEventListener('click', submit);
+  const rb = h('div',{class:'replybar',id:'replyBar',hidden:true});
+  const isGroupRoom = rooms[cur] && !isDm(rooms[cur]);
+  return h('div',{class:'composer'}, panel, sug, rb, h('div',{class:'crow'}, stampBtn, imgBtn, appsBtn, fileIn, ta, sendBtn));
+}
+async function doSend(kind, text){
+  text = String(text).trim(); const r = rooms[cur]; if (!text || !r) return;
+  if (r.postAdminOnly && !isSiteAdmin()) return toast(POST_MSG);
+  const data = {author:me.uid, text, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
+  if (kind === 'stamp') data.stamp = true;
+  const mentions = kind === 'stamp' ? [] : findMentions(text, r);
+  if (mentions.length) data.mentions = mentions;
+  if (replyTo){ data.replyTo = replyTo.id; data.replyToText = replyTo.text; replyTo = null; drawReply(); }
+  try {
+    await addDoc(msgCol(r), data);
+    pushRelay(r, kind==='stamp' ? 'スタンプ '+text : text);
+    updateDoc(roomRef(r), {lastMsg: kind==='stamp' ? 'スタンプ '+text : text.slice(0,80), lastMsgTs:serverTimestamp(), lastUid:me.uid, lastMentions:mentions, ['typing.'+me.uid]:null}).catch(()=>{});
+  } catch(e){ console.error(e); toast('送信できませんでした'); }
+}
+
+function pollModal(){
+  if (rooms[cur]?.postAdminOnly && !isSiteAdmin()) return toast(POST_MSG);
+  const r = rooms[cur]; if (!r) return;
+  const q = h('input',{class:'field',placeholder:'質問（例：今日やるゲームは？）',maxlength:'80'});
+  const opts = [h('input',{class:'field',placeholder:'選択肢1',maxlength:'40'}), h('input',{class:'field',placeholder:'選択肢2',maxlength:'40'})];
+  const list = h('div',{style:'display:grid;gap:8px'}, opts);
+  const add = h('button',{class:'btn ghost',onclick:()=>{ if (opts.length >= 6) return toast('選択肢は6つまでです'); const i = h('input',{class:'field',placeholder:'選択肢'+(opts.length+1),maxlength:'40'}); opts.push(i); list.append(i); i.focus(); }},'選択肢を追加');
+  const multi = h('input',{type:'checkbox'});
+  let close;
+  close = modal('投票を作る', [q, list, add, h('label',{style:'display:flex;gap:8px;align-items:center'}, multi, '複数選んでもOK'),
+    h('button',{class:'btn',onclick:async()=>{
+      const question = q.value.trim(), options = opts.map(i => i.value.trim()).filter(Boolean);
+      if (!question || options.length < 2) return toast('質問と、2つ以上の選択肢を入力してください');
+      close(); await sendPoll(r, question, options, multi.checked);
+    }},'送信')]);
+  setTimeout(() => q.focus(), 50);
+}
+async function sendPoll(r, question, options, multi){
+  const data = {author:me.uid, text:question, hasPoll:true, poll:{q:question, options, multi:!!multi, closed:false}, votes:{}, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
+  try {
+    await addDoc(msgCol(r), data);
+    pushRelay(r, '投票: ' + question);
+    updateDoc(roomRef(r), {lastMsg:'投票: ' + question.slice(0,70), lastMsgTs:serverTimestamp(), lastUid:me.uid, lastMentions:[]}).catch(()=>{});
+  } catch(e){ console.error(e); toast('投票を作れませんでした'); }
+}
+const fullCache = new Map();
+function openImage(r, mid, m){
+  const ov = h('div',{class:'lb'});
+  const img = h('img',{src:m.image,alt:'画像',draggable:'false'});
+  const note = h('div',{class:'lb-note',hidden:true},'高画質を読み込み中…');
+  let sc = 1, tx = 0, ty = 0, moved = false, lastTap = 0, startDist = 0, startSc = 1;
+  const pts = new Map();
+  const apply = () => { if (sc <= 1){ tx = 0; ty = 0; } img.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; };
+  const zoomAt = (ns, cx, cy) => {
+    ns = Math.min(8, Math.max(1, ns));
+    const rc = ov.getBoundingClientRect(), px = cx - rc.left - rc.width / 2, py = cy - rc.top - rc.height / 2;
+    tx = px - (px - tx) * (ns / sc); ty = py - (py - ty) * (ns / sc); sc = ns; apply();
+  };
+  const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  const dl = h('a',{'aria-label':'保存',title:'保存',download:'chatspace-image',href:m.image}, ico('download',20));
+  const bar = h('div',{class:'lb-bar'},
+    h('button',{'aria-label':'縮小',onclick:e=>{ e.stopPropagation(); zoomAt(sc/1.5, innerWidth/2, innerHeight/2); }},'−'),
+    h('button',{'aria-label':'拡大',onclick:e=>{ e.stopPropagation(); zoomAt(sc*1.5, innerWidth/2, innerHeight/2); }},'+'),
+    dl,
+    h('button',{'aria-label':'閉じる',onclick:close}, ico('x',22)));
+  ov.addEventListener('pointerdown', e => {
+    if (e.target.closest('.lb-bar')) return;
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved = false;
+    if (pts.size === 2){ const [p, q] = [...pts.values()]; startDist = Math.hypot(p.x - q.x, p.y - q.y); startSc = sc; }
+  });
+  ov.addEventListener('pointermove', e => {
+    const p = pts.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (pts.size === 2){
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (startDist) zoomAt(startSc * d / startDist, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      moved = true;
+    } else {
+      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      if (sc > 1){ tx += dx; ty += dy; apply(); }
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    }
+  });
+  const up = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size === 0 && !moved && !e.target.closest('.lb-bar')){
+      const now = Date.now();
+      if (e.target === img && now - lastTap < 320){ sc > 1 ? (sc = 1, apply()) : zoomAt(2.5, e.clientX, e.clientY); lastTap = 0; }
+      else if (e.target === img) lastTap = now;
+      else if (e.target === ov) close();
+    }
+  };
+  ov.addEventListener('pointerup', up);
+  ov.addEventListener('pointercancel', up);
+  ov.addEventListener('wheel', e => { e.preventDefault(); zoomAt(sc * (e.deltaY < 0 ? 1.2 : 1 / 1.2), e.clientX, e.clientY); }, {passive:false});
+  ov.append(img, bar, note);
+  document.body.append(ov);
+  if (m.hasFull){
+    const key = r.col + '/' + r.id + '/' + mid;
+    const show = data => { if (!ov.isConnected) return; img.src = data; dl.href = data; note.hidden = true; };
+    if (fullCache.has(key)) show(fullCache.get(key));
+    else {
+      note.hidden = false;
+      getDoc(doc(db, r.col, r.id, 'images', mid)).then(sn => {
+        if (sn.exists() && typeof sn.data().data === 'string' && sn.data().data.startsWith('data:image/')){ fullCache.set(key, sn.data().data); show(sn.data().data); }
+        else note.hidden = true;
+      }).catch(() => { note.textContent = '高画質を読み込めませんでした'; setTimeout(() => note.hidden = true, 2500); });
+    }
+  }
+}
+async function compressImage(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load')); i.src = url; });
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const type = (() => { const c = document.createElement('canvas'); c.width = c.height = 1; return c.toDataURL('image/webp').startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg'; })();
+    const draw = (edge, q) => {
+      const sc = Math.min(1, edge / Math.max(W, H));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(W * sc)); c.height = Math.max(1, Math.round(H * sc));
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL(type, q);
+    };
+    let full = null;
+    outer: for (const edge of [2560, 2048, 1600, 1280, 1024]){
+      for (const q of [0.85, 0.75, 0.65]){ const out = draw(edge, q); if (out.length <= 880000){ full = out; break outer; } }
+    }
+    if (!full) throw new Error('too big');
+    let thumb = null;
+    for (const [edge, q] of [[640, 0.72], [480, 0.65], [360, 0.6]]){ thumb = draw(edge, q); if (thumb.length <= 90000) break; }
+    return {full, thumb};
+  } finally { URL.revokeObjectURL(url); }
+}
+async function sendImage(file){
+  const r = rooms[cur]; if (!r) return;
+  if (r.postAdminOnly && !isSiteAdmin()) return toast(POST_MSG);
+  if (!isDm(r) && r.imageAdminOnly && !isAdmin(r)) return toast('このルームでは、画像を送れるのは管理者だけです');
+  if (!file.type.startsWith('image/')) return toast('画像ファイルを選んでください');
+  toast('画像を準備しています…');
+  let pic;
+  try { pic = await compressImage(file); } catch(e){ return toast('この画像は読み込めませんでした'); }
+  const ref = doc(msgCol(r));
+  const data = {author:me.uid, text:'', image:pic.thumb, hasImage:true, hasFull:true, ts:serverTimestamp(), readBy:[me.uid], reactions:{}};
+  if (replyTo){ data.replyTo = replyTo.id; data.replyToText = replyTo.text; replyTo = null; drawReply(); }
+  try {
+    const b = writeBatch(db);
+    b.set(ref, data);
+    b.set(doc(db, r.col, r.id, 'images', ref.id), {data:pic.full, author:me.uid, ts:serverTimestamp()});
+    await b.commit();
+    pushRelay(r, '画像を送信しました');
+    updateDoc(roomRef(r), {lastMsg:'画像を送信しました', lastMsgTs:serverTimestamp(), lastUid:me.uid}).catch(()=>{});
+  } catch(e){ console.error(e); toast('画像を送信できませんでした'); }
+}
+async function pushRelay(r, text){
+  if (!PUSH_URL) return;
+  try {
+    const idToken = await me.getIdToken();
+    fetch(PUSH_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({idToken, col:r.col, roomId:r.id, text})}).catch(()=>{});
+  } catch(e){}
+}
+function sendTyping(){
+  const r = rooms[cur]; if (!r || Date.now() - lastTypingSent < 2500) return;
+  lastTypingSent = Date.now();
+  updateDoc(roomRef(r), {['typing.'+me.uid]: serverTimestamp()}).catch(()=>{});
+}
+
+/* ---------- create / join / DM ---------- */
+function userPicker(excluded){
+  const sel = new Set();
+  const q = h('input',{class:'field',placeholder:'名前で探す'});
+  const list = h('div',{style:'display:grid;gap:2px;max-height:240px;overflow-y:auto'});
+  const count = h('div',{style:'font-size:12px;color:var(--sub)'}, '0人を選んでいます');
+  const draw = () => {
+    const key = q.value.trim().toLowerCase();
+    const arr = Object.entries(users).filter(([u, d]) => u !== me.uid && !excluded.has(u) && d.name && (!key || d.name.toLowerCase().includes(key)))
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, 'ja'));
+    list.replaceChildren(...(arr.length ? arr.map(([u, d]) => {
+      const on = sel.has(u);
+      return h('button',{type:'button',class:'urow',role:'checkbox','aria-checked':String(on),onclick:()=>{ if (on) sel.delete(u); else sel.add(u); count.textContent = sel.size + '人を選んでいます'; draw(); }},
+        avatar(u, d.name, true, isOnline(u)), h('div',{class:'n'}, d.name), h('span',{style:'font-weight:700;color:var(--accent)'}, on ? '選択中' : ''));
+    }) : [h('div',{class:'empty'},'選べる人がいません')]));
+  };
+  q.addEventListener('input', draw); draw();
+  return {node:h('div',{style:'display:grid;gap:8px'}, h('label',{},'招待する人（あとから追加もできます）'), q, list, count), selected:() => [...sel]};
+}
+function inviteModal(r){
+  const pk = userPicker(new Set([...(r.members || []), ...(r.banned || [])]));
+  let close;
+  close = modal('メンバーを招待', [pk.node, h('button',{class:'btn',onclick:async()=>{
+    const ids = pk.selected(); if (!ids.length) return toast('招待する人を選んでください');
+    try {
+      await updateDoc(roomRef(r), {members: arrayUnion(...ids), invited: ids, inviteTs: serverTimestamp(), invitedBy: me.uid});
+      await sysMsg(r, myName() + 'が' + ids.map(nameOf).join('、') + 'を招待しました').catch(()=>{});
+      close(); toast(ids.length + '人を招待しました');
+    } catch(e){ console.error(e); toast('招待できませんでした'); }
+  }},'招待する')]);
+}
+function roomModal(){
+  let mode = 'create', close;
+  const body = h('div',{style:'display:grid;gap:12px'});
+  const draw = () => {
+    body.replaceChildren();
+    const tabs = h('div',{class:'tabs'},
+      h('button',{class:mode==='create'?'on':'',onclick:()=>{mode='create';draw();}},'新しく作る'),
+      h('button',{class:mode==='join'?'on':'',onclick:()=>{mode='join';draw();}},'IDで参加'));
+    if (mode === 'create'){
+      const name = h('input',{class:'field',placeholder:'ルーム名',maxlength:'40'});
+      const desc = h('input',{class:'field',placeholder:'説明（なくてもOK）',maxlength:'80'});
+      const pk = userPicker(new Set());
+      const go = h('button',{class:'btn',onclick:async()=>{ if(!name.value.trim()) return; go.disabled=true; const ok = await createRoom(name.value.trim(), desc.value.trim(), pk.selected()); if (ok) close(); else go.disabled=false; }},'作成する');
+      body.append(tabs, name, desc, pk.node, go); setTimeout(()=>name.focus(),50);
+    } else {
+      const code = h('input',{class:'field',placeholder:'ルームID または 共有リンク',inputmode:'text'});
+      const go = h('button',{class:'btn',onclick:async()=>{ if(!code.value.trim()) return; go.disabled=true; const ok = await joinByCode(code.value); if (ok) close(); else go.disabled=false; }},'参加する');
+      body.append(tabs, code, go); setTimeout(()=>code.focus(),50);
+    }
+  };
+  draw();
+  close = modal('ルーム', body);
+}
+function waitOpen(id){ let n = 0; const t = setInterval(()=>{ if (rooms[id]){ clearInterval(t); openRoom(id); } else if (++n > 40) clearInterval(t); }, 150); }
+async function createRoom(name, desc, invitees){
+  invitees = invitees || [];
+  try {
+    let code, tries = 0;
+    do { code = String(Math.floor(100000 + Math.random()*900000)); if (!(await getDoc(doc(db,'rooms',code))).exists()) break; } while (++tries < 10);
+    await setDoc(doc(db,'rooms',code), {id:code, name, desc, members:[me.uid, ...invitees], createdBy:me.uid, createdAt:serverTimestamp(), lastMsg:'', lastMsgTs:serverTimestamp(), ...(invitees.length ? {invited:invitees, inviteTs:serverTimestamp(), invitedBy:me.uid} : {})});
+    await addDoc(collection(db,'rooms',code,'messages'), {type:'system', text:myName()+'がルームを作成しました' + (invitees.length ? '（招待：' + invitees.map(nameOf).join('、') + '）' : ''), ts:serverTimestamp(), readBy:[], reactions:{}});
+    waitOpen(code); return true;
+  } catch(e){ console.error(e); toast('ルームを作成できませんでした（ルールを確認してください）'); return false; }
+}
+async function joinByCode(input){
+  let id = String(input).trim();
+  try { const u = new URL(id); id = u.searchParams.get('room') || u.searchParams.get('join') || id; } catch(e){}
+  id = id.replace(/\s/g,'');
+  try {
+    const snap = await getDoc(doc(db,'rooms',id));
+    if (!snap.exists()){ toast('そのルームは見つかりません'); return false; }
+    const room = snap.data();
+    if ((room.banned||[]).includes(me.uid)){ toast('このルームには参加できません'); return false; }
+    if (!(room.members||[]).includes(me.uid)){
+      await updateDoc(doc(db,'rooms',id), {members: arrayUnion(me.uid)});
+      await addDoc(collection(db,'rooms',id,'messages'), {type:'system', text:myName()+'が参加しました', ts:serverTimestamp(), readBy:[], reactions:{}});
+      toast((room.name||'ルーム')+'に参加しました');
+    }
+    waitOpen(id); return true;
+  } catch(e){ console.error(e); toast('参加できませんでした'); return false; }
+}
+async function joinByInvite(invId){
+  try {
+    const snap = await getDoc(doc(db,'invites',invId));
+    if (!snap.exists()) return toast('招待リンクが無効です');
+    const inv = snap.data();
+    if (inv.expiresAt?.toDate && inv.expiresAt.toDate() < new Date()) return toast('招待リンクの期限が切れています');
+    await joinByCode(inv.roomId);
+  } catch(e){ console.error(e); toast('招待リンクを開けませんでした'); }
+}
+function dmModal(){
+  const q = h('input',{class:'field',placeholder:'名前で検索'});
+  const list = h('div',{});
+  let close;
+  const draw = () => {
+    const key = q.value.trim().toLowerCase();
+    const arr = Object.entries(users).filter(([u,d]) => u !== me.uid && d.name && (!key || d.name.toLowerCase().includes(key))).sort((a,b)=>a[1].name.localeCompare(b[1].name,'ja'));
+    list.replaceChildren(...(arr.length ? arr.map(([u,d]) => h('button',{class:'urow',onclick:async()=>{ close(); await startDm(u); }}, avatar(u,d.name,true,isOnline(u)), h('div',{class:'n'}, d.name, h('small',{}, isOnline(u) ? 'オンライン' : 'オフライン')))) : [h('div',{class:'empty'},'見つかりませんでした。共有リンクで友だちを呼びましょう。')]));
+  };
+  q.addEventListener('input', draw); draw();
+  close = modal('DMを始める', [q, list]);
+}
+async function startDm(uid){
+  const members = [me.uid, uid].sort(), id = 'dm_' + members.join('_');
+  try {
+    const ref = doc(db,'dms',id);
+    if (!(await getDoc(ref)).exists()){
+      await setDoc(ref, {id, members, createdAt:serverTimestamp(), lastMsgTs:serverTimestamp()});
+      await addDoc(collection(db,'dms',id,'messages'), {type:'system', text:'DM開始', ts:serverTimestamp(), readBy:[], reactions:{}});
+    }
+    waitOpen(id);
+  } catch(e){ console.error(e); toast('DMを開始できませんでした'); }
+}
+
+/* ---------- profile ---------- */
+async function squareThumb(file, size){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load')); i.src = url; });
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, size, size);
+    g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+    return c.toDataURL('image/jpeg', 0.82);
+  } finally { URL.revokeObjectURL(url); }
+}
+function profileModal(){
+  const u = users[me.uid] || {};
+  const name = h('input',{class:'field',value:u.name || myName(),maxlength:'20','aria-label':'表示名'});
+  let color = u.color || COLORS[0];
+  let photo; // undefined=変更なし / 文字列=新しい画像 / null=削除
+  const pv = h('div',{class:'pimg'});
+  const drawPv = () => {
+    const shown = photo === undefined ? u.photo : photo;
+    const a = h('div',{class:'avatar',style:`background:${color}`}, typeof shown === 'string' && shown.startsWith('data:image/') ? h('img',{src:shown,alt:''}) : (Array.from(name.value || myName())[0] || '?'));
+    const fi = h('input',{type:'file',accept:'image/*',hidden:true,onchange:async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { photo = await squareThumb(f, 160); drawPv(); } catch(err){ toast('この画像は読み込めませんでした'); } }});
+    pv.replaceChildren(a, h('div',{style:'display:grid;gap:6px'},
+      h('button',{class:'btn ghost',style:'padding:6px 14px;font-size:13px',onclick:()=>fi.click()},'画像を選ぶ'),
+      (shown ? h('button',{class:'btn ghost',style:'padding:6px 14px;font-size:13px',onclick:()=>{ photo = null; drawPv(); }},'画像を外す') : null)), fi);
+  };
+  const sw = h('div',{class:'swatches'});
+  const draw = () => { sw.replaceChildren(...COLORS.map(c => h('button',{class:c===color?'on':'',style:`background:${c}`,'aria-label':'色 '+c,onclick:()=>{ color=c; draw(); }}))); drawPv(); };
+  draw();
+  let close;
+  close = modal('プロフィール', [h('label',{},'アイコン'), pv, h('label',{},'表示名'), name, h('label',{},'アイコンの色（画像がないとき）'), sw,
+    h('button',{class:'btn',onclick:async()=>{ const n = name.value.trim(); if (!n) return; try{ const upd = {name:n, color}; if (photo === null) upd.photo = deleteField(); else if (typeof photo === 'string') upd.photo = photo; await updateDoc(doc(db,'users',me.uid), upd); close(); toast('保存しました'); }catch(e){ toast('保存できませんでした'); } }},'保存する')]);
+}
+
+
+/* ---------- 画面共有（通話中） ---------- */
+const canShare = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+async function getScreen(onEnded){
+  if (!canShare){ toast('この端末・ブラウザは、画面共有に対応していません（パソコンのブラウザで使えます）'); return null; }
+  try {
+    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:15, max:30}, width:{max:1920}, height:{max:1080}}, audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false, suppressLocalAudioPlayback:true}});
+    const t = st.getVideoTracks()[0];
+    try { t.contentHint = 'detail'; } catch(e){}
+    t.onended = onEnded;
+    return st;
+  } catch(e){ if (e.name !== 'NotAllowedError') toast('画面共有を始められませんでした'); return null; }
+}
+async function getCam(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('この端末・ブラウザは、カメラに対応していません'); return null; }
+  try { return await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:20, max:24}, facingMode:'user'}, audio:false}); }
+  catch(e){ toast('カメラが使えません。ブラウザのカメラの許可を確認してください'); return null; }
+}
+async function setSender(sender, track, maxBps){
+  if (!sender) throw new Error('no sender');
+  await sender.replaceTrack(track);
+  if (track){
+    try { const p = sender.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; p.encodings[0].maxBitrate = maxBps || 1500000; await sender.setParameters(p); } catch(e){}
+  }
+}
+function makeVid(stream){
+  const v = h('video',{class:'rv',autoplay:'',playsinline:'',muted:''});
+  v.muted = true; v.srcObject = stream;
+  v.addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else if (v.requestFullscreen) v.requestFullscreen(); });
+  return v;
+}
+const stopStream = st => { if (st) st.getTracks().forEach(t => { t.onended = null; t.stop(); }); };
+
+/* ---------- 通話（1対1の音声通話） ---------- */
+let ICE = {iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302']}]};
+const TURN_URL = '';  // ← CloudflareのWorkerのURLを、ここに貼ります（空のままなら、今までどおり）
+let iceTimer;
+async function loadIce(){
+  if (!TURN_URL) return;
+  try {
+    const j = await (await fetch(TURN_URL)).json(), ic = [].concat(j.iceServers || []);
+    if (ic.length) ICE = {iceServers:[ICE.iceServers[0], ...ic]};
+  } catch(e){ console.warn('TURN取得に失敗', e); }
+  if (!iceTimer) iceTimer = setInterval(loadIce, 6*3600e3);
+}
+let call = null, incoming = null, ringCtx = null, ringTimer = null;
+const handledCalls = new Set();
+const fmtDur = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+
+function startRing(){
+  stopRing();
+  if (isQuiet()){ navigator.vibrate && navigator.vibrate([300,150,300]); ringTimer = setInterval(() => { navigator.vibrate && navigator.vibrate([300,150,300]); }, 1600); return; }
+  try {
+    ringCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = () => { if (!ringCtx) return; const o = ringCtx.createOscillator(), g = ringCtx.createGain(); o.frequency.value = 480; g.gain.value = 0.08; o.connect(g); g.connect(ringCtx.destination); o.start(); o.stop(ringCtx.currentTime + 0.35); };
+    beep();
+    ringTimer = setInterval(() => { beep(); navigator.vibrate && navigator.vibrate([300,150,300]); }, 1600);
+  } catch(e){}
+}
+function stopRing(){ clearInterval(ringTimer); ringTimer = null; try { ringCtx && ringCtx.close(); } catch(e){} ringCtx = null; }
+
+function newCall(o){
+  const pc = new RTCPeerConnection(ICE);
+  const audio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(audio);
+  const c = {...o, pc, audio, pending:[], unsubs:[], state:'ringing', connectedAt:0, muted:false};
+  o.stream.getTracks().forEach(t => pc.addTrack(t, o.stream));
+  pc.ontrack = e => {
+    if (e.track.kind === 'audio'){
+      if (e.streams && e.streams[0]){ audio.srcObject = e.streams[0]; audio.play().catch(()=>{}); }
+      else { if (!c.saudio){ c.saudio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(c.saudio); } c.saudio.srcObject = new MediaStream([e.track]); c.saudio.play().catch(()=>{}); }
+    }
+    else {
+      const vs = pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+      if (vs.indexOf(e.transceiver) === 1) c.remoteCStream = new MediaStream([e.track]);
+      else c.remoteVStream = new MediaStream([e.track]);
+      drawCallUI();
+    }
+  };
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
+    if (st === 'connected'){ c.state = 'active'; c.connectedAt = c.connectedAt || Date.now(); clearTimeout(c.ringTimeout); stopRing(); drawCallUI(); }
+    else if (st === 'failed'){ toast('通話がつながりませんでした（回線の都合で、つながらないことがあります）'); finishCall(c, 'ended', true); }
+    else if (st === 'disconnected'){ clearTimeout(c.dropTimer); c.dropTimer = setTimeout(() => { if (call === c && pc.connectionState !== 'connected') finishCall(c, 'ended', true); }, 8000); }
+  };
+  call = c;
+  return c;
+}
+function addCand(c, d){ if (c.pc.remoteDescription) c.pc.addIceCandidate(d).catch(()=>{}); else c.pending.push(d); }
+function flushCands(c){ c.pending.splice(0).forEach(d => c.pc.addIceCandidate(d).catch(()=>{})); }
+const candJson = cand => JSON.parse(JSON.stringify(cand.toJSON()));
+
+async function getMic(){
+  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('この端末・ブラウザは、通話に対応していません'); return null; }
+  try { return await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true}}); }
+  catch(e){ toast('マイクが使えません。ブラウザのマイクの許可を確認してください'); return null; }
+}
+
+async function startCall(withCam){
+  const r = rooms[cur];
+  if (!r || !isDm(r)) return;
+  if (call || incoming || gcall) return toast('ほかの通話中です');
+  const stream = await getMic(); if (!stream) return;
+  const camStream = withCam ? await getCam() : null;
+  const peer = otherUid(r);
+  const callRef = doc(collection(db, r.col, r.id, 'calls'));
+  const c = newCall({role:'caller', r, dmId:r.id, callId:callRef.id, stream, peer});
+  try {
+    c.pc.onicecandidate = e => { if (e.candidate) addDoc(collection(callRef,'callerCandidates'), candJson(e.candidate)).catch(()=>{}); };
+    c.vtr = c.pc.addTransceiver('video', {direction:'sendrecv'});
+    c.atr = c.pc.addTransceiver('audio', {direction:'sendrecv'});
+    c.ctr = c.pc.addTransceiver('video', {direction:'sendrecv'});
+    if (camStream){ c.cam = camStream; await setSender(c.ctr.sender, camStream.getVideoTracks()[0], 450000).catch(()=>{}); }
+    const offer = await c.pc.createOffer();
+    await c.pc.setLocalDescription(offer);
+    await setDoc(callRef, {offer:{type:offer.type, sdp:offer.sdp}, caller:me.uid, callee:peer, createdAt:serverTimestamp(), ...(c.cam ? {cam:{[me.uid]:true}} : {})});
+    await updateDoc(roomRef(r), {callId:callRef.id, callState:'ringing', callFrom:me.uid, callTs:serverTimestamp()});
+  } catch(e){ console.error(e); toast('電話をかけられませんでした（Firestoreのルールを確認してください）'); c.silent = true; finishCall(c, 'ended', false); return; }
+  c.unsubs.push(onSnapshot(callRef, sn => {
+    const d = sn.data();
+    const rs = !!(d && d.sharing && d.sharing !== me.uid);
+    if (rs !== !!c.remoteSharing){ c.remoteSharing = rs; drawCallUI(); }
+    const rc = !!(d && d.cam && d.cam[c.peer]);
+    if (rc !== !!c.remoteCam){ c.remoteCam = rc; drawCallUI(); }
+    if (d && d.answer && !c.pc.currentRemoteDescription && !c.gotAnswer){
+      c.gotAnswer = true;
+      c.pc.setRemoteDescription(d.answer).then(() => flushCands(c)).catch(()=>{});
+      if (c.state === 'ringing') { c.state = 'connecting'; drawCallUI(); }
+    }
+  }));
+  c.unsubs.push(onSnapshot(collection(callRef,'calleeCandidates'), sn => sn.docChanges().forEach(ch => { if (ch.type === 'added') addCand(c, ch.doc.data()); })));
+  c.ringTimeout = setTimeout(() => { if (call === c && c.state === 'ringing') finishCall(c, 'missed', true); }, 45000);
+  drawCallUI();
+  startRing();
+}
+
+async function answerCall(){
+  const i = incoming; if (!i) return;
+  hideIncoming();
+  if (i.group) return joinGroupCall(i.r, i.callId, false);
+  const stream = await getMic();
+  if (!stream){ updateDoc(doc(db,i.r.col,i.r.id),{callState:'declined'}).catch(()=>{}); return; }
+  const r = i.r;
+  const callRef = doc(db, r.col, r.id, 'calls', i.callId);
+  let d;
+  try { d = (await getDoc(callRef)).data(); } catch(e){}
+  if (!d || !d.offer){ stream.getTracks().forEach(t => t.stop()); return toast('通話が終了していました'); }
+  const c = newCall({role:'callee', r, dmId:r.id, callId:i.callId, stream, peer:r.callFrom});
+  c.state = 'connecting';
+  try {
+    c.pc.onicecandidate = e => { if (e.candidate) addDoc(collection(callRef,'calleeCandidates'), candJson(e.candidate)).catch(()=>{}); };
+    await c.pc.setRemoteDescription(d.offer);
+    const vts = c.pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+    c.vtr = vts[0] || null; c.ctr = vts[1] || null;
+    vts.forEach(t => { t.direction = 'sendrecv'; });
+    c.atr = c.pc.getTransceivers().filter(t => t.receiver.track.kind === 'audio')[1] || null;
+    if (c.atr) c.atr.direction = 'sendrecv';
+    const ans = await c.pc.createAnswer();
+    await c.pc.setLocalDescription(ans);
+    await updateDoc(callRef, {answer:{type:ans.type, sdp:ans.sdp}});
+    await updateDoc(roomRef(r), {callState:'active'});
+    c.unsubs.push(onSnapshot(callRef, sn => { const dd = sn.data(); const rs = !!(dd && dd.sharing && dd.sharing !== me.uid); if (rs !== !!c.remoteSharing){ c.remoteSharing = rs; drawCallUI(); } const rc = !!(dd && dd.cam && dd.cam[c.peer]); if (rc !== !!c.remoteCam){ c.remoteCam = rc; drawCallUI(); } }));
+    c.unsubs.push(onSnapshot(collection(callRef,'callerCandidates'), sn => sn.docChanges().forEach(ch => { if (ch.type === 'added') addCand(c, ch.doc.data()); })));
+    flushCands(c);
+    drawCallUI();
+  } catch(e){ console.error(e); toast('通話を始められませんでした'); finishCall(c, 'ended', true); }
+}
+
+function declineCall(){
+  const i = incoming; hideIncoming();
+  if (i && !i.group) updateDoc(doc(db, i.r.col, i.r.id), {callState:'declined'}).catch(()=>{});
+}
+
+async function finishCall(c, state, writeRemote){
+  if (!c || c.done) return;
+  c.done = true;
+  clearTimeout(c.ringTimeout); clearTimeout(c.dropTimer); clearInterval(c.tick); stopRing();
+  c.unsubs.forEach(f => f());
+  try { c.stream.getTracks().forEach(t => t.stop()); } catch(e){}
+  stopStream(c.screen); c.screen = null; stopStream(c.cam); c.cam = null;
+  try { c.pc.close(); } catch(e){}
+  c.audio.remove(); if (c.saudio) c.saudio.remove();
+  if (call === c) call = null;
+  const ui = $('#callUI'); if (ui) ui.remove();
+  const dur = c.connectedAt ? Math.round((Date.now() - c.connectedAt) / 1000) : 0;
+  if (writeRemote) updateDoc(roomRef(c.r), {callState: state}).catch(()=>{});
+  if (c.role === 'caller' && !c.silent){
+    const text = dur ? '通話 ' + fmtDur(dur) : state === 'declined' ? '通話が拒否されました' : state === 'missed' ? '不在着信' : '通話がキャンセルされました';
+    sysMsg(c.r, text).catch(()=>{});
+  }
+}
+
+const callDocRef = c => doc(db, c.r.col, c.r.id, 'calls', c.callId);
+async function toggleShareDm(c){
+  if (c.screen) return stopShareDm(c);
+  if (c.state !== 'active') return toast('つながってから、画面共有を始められます');
+  if (!c.vtr) return toast('相手のアプリが古いため、画面共有できません');
+  const st = await getScreen(() => stopShareDm(c)); if (!st) return;
+  c.screen = st;
+  try {
+    await setSender(c.vtr.sender, st.getVideoTracks()[0]);
+    const at = st.getAudioTracks()[0];
+    if (at && c.atr) await c.atr.sender.replaceTrack(at);
+    else toast('画面だけ共有しました。音も届けるには、共有の選択画面で「システム音声」または「タブの音声」にチェックを入れてください');
+    updateDoc(callDocRef(c), {sharing:me.uid}).catch(()=>{});
+  }
+  catch(e){ stopStream(st); c.screen = null; return toast('画面共有を始められませんでした'); }
+  drawCallUI();
+}
+async function stopShareDm(c){
+  if (!c.screen) return;
+  stopStream(c.screen); c.screen = null;
+  try { await c.vtr.sender.replaceTrack(null); } catch(e){}
+  try { if (c.atr) await c.atr.sender.replaceTrack(null); } catch(e){}
+  updateDoc(callDocRef(c), {sharing:null}).catch(()=>{});
+  drawCallUI();
+}
+async function toggleCamDm(c){
+  if (c.cam) return stopCamDm(c, true);
+  if (!c.ctr) return toast('相手のアプリが古いため、カメラを使えません');
+  const st = await getCam(); if (!st) return;
+  try { await setSender(c.ctr.sender, st.getVideoTracks()[0], 450000); }
+  catch(e){ stopStream(st); return toast('カメラを始められませんでした'); }
+  c.cam = st; c.myvid = null;
+  updateDoc(callDocRef(c), {['cam.' + me.uid]: true}).catch(()=>{});
+  drawCallUI();
+}
+async function stopCamDm(c, announce){
+  if (!c.cam) return;
+  stopStream(c.cam); c.cam = null; c.myvid = null;
+  try { if (c.ctr) await c.ctr.sender.replaceTrack(null); } catch(e){}
+  if (announce) updateDoc(callDocRef(c), {['cam.' + me.uid]: false}).catch(()=>{});
+  drawCallUI();
+}
+function camVid(stream, cls, mirror){
+  const v = makeVid(stream); v.className = cls; if (mirror) v.style.transform = 'scaleX(-1)'; return v;
+}
+function drawCallUI(){
+  const c = call; if (!c) return;
+  let ui = $('#callUI');
+  if (!ui){ ui = h('div',{class:'callov',id:'callUI',role:'dialog','aria-label':'通話'}); document.body.append(ui); }
+  const name = nameOf(c.peer);
+  let screenV = null, camV = null;
+  if (c.remoteSharing && c.remoteVStream){
+    if (!c.vid){ c.vid = makeVid(c.remoteVStream); }
+    else if (c.vid.srcObject !== c.remoteVStream) c.vid.srcObject = c.remoteVStream;
+    screenV = c.vid;
+  }
+  if (c.remoteCam && c.remoteCStream){
+    if (!c.cvid){ c.cvid = camVid(c.remoteCStream, 'rv', false); }
+    else if (c.cvid.srcObject !== c.remoteCStream) c.cvid.srcObject = c.remoteCStream;
+    c.cvid.className = screenV ? 'pv' : 'rv';
+    camV = c.cvid;
+  }
+  const main = screenV || camV;
+  const pips = [];
+  if (screenV && camV) pips.push(camV);
+  if (c.cam){ if (!c.myvid) c.myvid = camVid(c.cam, 'pv', true); pips.push(c.myvid); }
+  ui.replaceChildren(
+    main || avatar(c.peer, name, false, false),
+    pips.length ? h('div',{class:'pips'}, pips) : null,
+    h('div',{class:'cname'}, screenV ? name + 'さんの画面' : name),
+    h('div',{class:'cstat',id:'callStat'}, callStatus(c) + (c.screen ? '・画面を共有中' : '')),
+    h('div',{class:'cbtns'},
+      h('button',{class:'cbtn'+(c.muted?' on':''),'aria-label':c.muted?'ミュートを解除':'ミュート',onclick:()=>{ c.muted = !c.muted; c.stream.getAudioTracks().forEach(t => t.enabled = !c.muted); drawCallUI(); }}, ico(c.muted ? 'micoff' : 'mic', 28)),
+      h('button',{class:'cbtn'+(c.cam?' on':''),'aria-label':c.cam?'カメラをオフにする':'カメラをオンにする',onclick:()=>toggleCamDm(c)}, ico(c.cam ? 'video' : 'videooff', 28)),
+      h('button',{class:'cbtn'+(c.screen?' on':''),'aria-label':c.screen?'画面共有をやめる':'画面を共有する',onclick:()=>toggleShareDm(c)}, ico('screen', 28)),
+      h('button',{class:'cbtn red','aria-label':'電話を切る',onclick:()=>finishCall(c, 'ended', true)}, ico('phone', 28))));
+  [screenV, camV, ...pips].forEach(v => { if (v) v.play().catch(()=>{}); });
+  if (c.state === 'active' && !c.tick) c.tick = setInterval(() => { const s = $('#callStat'); if (s) s.textContent = callStatus(c) + (c.screen ? '・画面を共有中' : ''); }, 1000);
+}
+function callStatus(c){
+  if (c.state === 'active') return '通話中 ' + fmtDur(Math.floor((Date.now() - c.connectedAt) / 1000));
+  return c.role === 'caller' && c.state === 'ringing' ? '呼び出し中…' : '接続中…';
+}
+
+function showIncoming(r, group){
+  incoming = {dmId:r.id, callId:r.callId, r, group:!!group};
+  handledCalls.add(r.callId);
+  startRing();
+  const name = group ? roomTitle(r) : nameOf(r.callFrom);
+  document.body.append(h('div',{class:'callov',id:'incomingUI',role:'alertdialog','aria-label':'着信'},
+    avatar(r.callFrom, name, false, false),
+    h('div',{class:'cname'}, name),
+    h('div',{class:'cstat'}, group ? nameOf(r.callFrom) + 'がグループ通話を始めました' : '着信中…'),
+    h('div',{class:'cbtns'},
+      h('button',{class:'cbtn red','aria-label':group ? '無視' : '拒否',onclick:declineCall}, ico('phone', 28)),
+      h('button',{class:'cbtn green','aria-label':group ? '参加' : '応答',onclick:answerCall}, ico('phone', 28)))));
+  incoming.timeout = setTimeout(hideIncoming, 45000);
+  if (!inFocus() && 'Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker){
+    navigator.serviceWorker.ready.then(reg => reg.showNotification(group ? 'グループ通話' : '着信', {
+      body: group ? name + 'で通話が始まりました' : name + 'から電話です',
+      icon:'icon-192.png?v=2', badge:'icon-192.png?v=2', tag:'call', renotify:true, requireInteraction:true,
+      vibrate:[300,150,300,150,300], data:{url:'/chat-app/?room=' + r.id}
+    })).catch(()=>{});
+  }
+}
+function closeCallNotification(){
+  try { navigator.serviceWorker && navigator.serviceWorker.ready.then(reg => reg.getNotifications({tag:'call'}).then(l => l.forEach(n => n.close()))).catch(()=>{}); } catch(e){}
+}
+function hideIncoming(){
+  closeCallNotification();
+  if (incoming) clearTimeout(incoming.timeout);
+  incoming = null;
+  if (!call) stopRing();
+  const u = $('#incomingUI'); if (u) u.remove();
+}
+function callWatch(){
+  for (const r of Object.values(rooms)){
+    if (!isDm(r)){
+      if (incoming && incoming.group && incoming.dmId === r.id && r.callState !== 'active') hideIncoming();
+      if (r.callState === 'active' && r.callId && r.callFrom && r.callFrom !== me.uid && !gcall && !call && !incoming && !handledCalls.has(r.callId) && Date.now() - ms(r.callTs) < 50000) showIncoming(r, true);
+      continue;
+    }
+    if (call && call.dmId === r.id && r.callId === call.callId && ['ended','declined','missed'].includes(r.callState)) finishCall(call, r.callState, false);
+    if (incoming && incoming.dmId === r.id && r.callId === incoming.callId && r.callState !== 'ringing') hideIncoming();
+    if (r.callState === 'ringing' && r.callFrom && r.callFrom !== me.uid && !call && !incoming && !handledCalls.has(r.callId) && Date.now() - ms(r.callTs) < 50000) showIncoming(r);
+  }
+}
+
+/* ---------- グループ通話（メッシュ方式・最大6人） ---------- */
+let gcall = null;
+const GMAX = 6;
+
+async function groupCallAction(withCam){
+  const r = rooms[cur]; if (!r) return;
+  if (gcall) return toast('すでに通話中です');
+  if (call || incoming) return toast('ほかの通話中です');
+  const active = r.callState === 'active' && r.callId && Date.now() - ms(r.callTs) < 6 * 3600 * 1000;
+  if (active) return joinGroupCall(r, r.callId, false, !!withCam);
+  return joinGroupCall(r, doc(collection(db, r.col, r.id, 'calls')).id, true, !!withCam);
+}
+const peerRec = (g, uid) => { let p = g.peers.get(uid); if (!p){ p = {pc:null, audio:null, pending:[], state:'connecting'}; g.peers.set(uid, p); } return p; };
+const sendSig = (g, to, type, data) => addDoc(collection(g.callRef, 'signals'), {from:me.uid, to, type, data, ts:serverTimestamp()}).catch(()=>{});
+function closePeer(g, uid){
+  const p = g.peers.get(uid);
+  if (p){ try { p.pc && p.pc.close(); } catch(e){} p.audio && p.audio.remove(); p.saudio && p.saudio.remove(); g.peers.delete(uid); }
+}
+function makePc(g, uid){
+  const p = peerRec(g, uid);
+  if (p.pc) return p;
+  const pc = new RTCPeerConnection(ICE); p.pc = pc;
+  p.audio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(p.audio);
+  g.stream.getTracks().forEach(t => pc.addTrack(t, g.stream));
+  pc.ontrack = e => {
+    if (e.track.kind === 'audio'){
+      if (e.streams && e.streams[0]){ p.audio.srcObject = e.streams[0]; p.audio.play().catch(()=>{}); }
+      else { if (!p.saudio){ p.saudio = h('audio',{autoplay:'',playsinline:'',style:'display:none'}); document.body.append(p.saudio); } p.saudio.srcObject = new MediaStream([e.track]); p.saudio.play().catch(()=>{}); }
+    }
+    else {
+      const vs = pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+      if (vs.indexOf(e.transceiver) === 1) p.cstream = new MediaStream([e.track]);
+      else p.vstream = new MediaStream([e.track]);
+      drawGroupUI();
+    }
+  };
+  pc.onicecandidate = e => { if (e.candidate) sendSig(g, uid, 'candidate', candJson(e.candidate)); };
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
+    p.state = st === 'connected' ? 'active' : st === 'failed' ? 'failed' : 'connecting';
+    if (st === 'failed') toast(nameOf(uid) + 'さんとつながりませんでした');
+    drawGroupUI();
+  };
+  return p;
+}
+async function offerTo(g, uid){
+  const p = makePc(g, uid);
+  p.vtr = p.pc.addTransceiver('video', {direction:'sendrecv'});
+  p.atr = p.pc.addTransceiver('audio', {direction:'sendrecv'});
+  p.ctr = p.pc.addTransceiver('video', {direction:'sendrecv'});
+  const off = await p.pc.createOffer();
+  await p.pc.setLocalDescription(off);
+  sendSig(g, uid, 'offer', {type:off.type, sdp:off.sdp});
+}
+async function handleSignal(g, sg){
+  const uid = sg.from; if (!uid || uid === me.uid) return;
+  try {
+    if (sg.type === 'offer'){
+      const old = g.peers.get(uid);
+      if (old && old.pc && old.pc.remoteDescription){ const keep = old.pending; closePeer(g, uid); peerRec(g, uid).pending = keep; }
+      const p = makePc(g, uid);
+      await p.pc.setRemoteDescription(sg.data);
+      const vts = p.pc.getTransceivers().filter(t => t.receiver.track.kind === 'video');
+      p.vtr = vts[0] || null; p.ctr = vts[1] || null;
+      vts.forEach(t => { t.direction = 'sendrecv'; });
+      p.atr = p.pc.getTransceivers().filter(t => t.receiver.track.kind === 'audio')[1] || null;
+      if (p.atr) p.atr.direction = 'sendrecv';
+      const ans = await p.pc.createAnswer();
+      await p.pc.setLocalDescription(ans);
+      sendSig(g, uid, 'answer', {type:ans.type, sdp:ans.sdp});
+      attachScreen(g, p); attachCam(g, p);
+      p.pending.splice(0).forEach(c => p.pc.addIceCandidate(c).catch(()=>{}));
+    } else if (sg.type === 'answer'){
+      const p = g.peers.get(uid);
+      if (p && p.pc && !p.pc.currentRemoteDescription){
+        await p.pc.setRemoteDescription(sg.data);
+        p.pending.splice(0).forEach(c => p.pc.addIceCandidate(c).catch(()=>{}));
+        attachScreen(g, p); attachCam(g, p);
+      }
+    } else if (sg.type === 'candidate'){
+      const p = peerRec(g, uid);
+      if (p.pc && p.pc.remoteDescription) p.pc.addIceCandidate(sg.data).catch(()=>{}); else p.pending.push(sg.data);
+    }
+  } catch(e){ console.warn('signal', e); }
+}
+
+async function joinGroupCall(r, callId, isStart, withCam){
+  if (gcall) return;
+  const stream = await getMic(); if (!stream) return;
+  const camStream = withCam ? await getCam() : null;
+  const callRef = doc(db, r.col, r.id, 'calls', callId);
+  let live = [];
+  try {
+    const pd = await getDocs(collection(callRef, 'peers'));
+    live = pd.docs.filter(d => d.id !== me.uid && Date.now() - ms(d.data({serverTimestamps:'estimate'}).ts) < 90000);
+  } catch(e){ stream.getTracks().forEach(t => t.stop()); console.error(e); return toast('通話に参加できませんでした（Firestoreのルールを確認してください）'); }
+  if (live.length >= GMAX - 1){ stream.getTracks().forEach(t => t.stop()); return toast('グループ通話は、' + GMAX + '人までです'); }
+  const g = gcall = {r, callId, callRef, stream, peers:new Map(), present:new Set(), names:{}, ptime:{}, sharing:{}, vids:{}, cams:{}, cvids:{}, cam:camStream, unsubs:[], muted:false, startedAt:Date.now()};
+  try {
+    const old = await getDocs(query(collection(callRef, 'signals'), where('to', '==', me.uid)));
+    await Promise.all(old.docs.map(d => deleteDoc(d.ref).catch(()=>{})));
+    await setDoc(doc(callRef, 'peers', me.uid), {uid:me.uid, name:myName(), ts:serverTimestamp(), cam:!!camStream});
+    if (isStart || !(r.callState === 'active' && r.callId === callId)){
+      await setDoc(callRef, {startedBy:me.uid, createdAt:serverTimestamp()}, {merge:true});
+      await updateDoc(roomRef(r), {callId, callState:'active', callFrom:me.uid, callTs:serverTimestamp()});
+      handledCalls.add(callId);
+      sysMsg(r, myName() + 'がグループ通話を始めました').catch(()=>{});
+    }
+  } catch(e){
+    console.error(e); toast('通話に参加できませんでした（Firestoreのルールを確認してください）');
+    stream.getTracks().forEach(t => t.stop()); gcall = null; return;
+  }
+  g.unsubs.push(onSnapshot(collection(callRef, 'peers'), sn => {
+    sn.docChanges().forEach(ch => {
+      const uid = ch.doc.id; if (uid === me.uid) return;
+      const d = ch.doc.data({serverTimestamps:'estimate'});
+      if (ch.type === 'removed'){ g.present.delete(uid); closePeer(g, uid); delete g.sharing[uid]; delete g.vids[uid]; delete g.cams[uid]; delete g.cvids[uid]; return; }
+      g.ptime[uid] = ms(d.ts) || Date.now();
+      g.sharing[uid] = !!d.sharing;
+      g.cams[uid] = !!d.cam;
+      if (Date.now() - g.ptime[uid] > 90000) return;
+      g.names[uid] = d.name;
+      if (!g.present.has(uid)){
+        g.present.add(uid);
+        if (me.uid > uid) offerTo(g, uid).catch(e => console.warn('offer', e)); // 双方が同時に発信しないよう、IDの大きいほうが発信する
+      }
+    });
+    drawGroupUI();
+  }));
+  g.unsubs.push(onSnapshot(query(collection(callRef, 'signals'), where('to', '==', me.uid)), sn => {
+    sn.docChanges().forEach(ch => { if (ch.type === 'added'){ handleSignal(g, ch.doc.data()); deleteDoc(ch.doc.ref).catch(()=>{}); } });
+  }));
+  g.beat = setInterval(() => {
+    updateDoc(doc(callRef, 'peers', me.uid), {ts:serverTimestamp()}).catch(()=>{});
+    for (const uid of [...g.present]) if (Date.now() - (g.ptime[uid] || 0) > 90000){ g.present.delete(uid); closePeer(g, uid); }
+    drawGroupUI();
+  }, 20000);
+  g.clock = setInterval(() => { const s = $('#gStat'); if (s) s.textContent = gStatus(g) + (g.screen ? '・画面を共有中' : ''); }, 1000);
+  drawGroupUI();
+}
+
+function attachCam(g, p){
+  if (!g.cam || !p.ctr) return;
+  setSender(p.ctr.sender, g.cam.getVideoTracks()[0], 400000).catch(()=>{});
+}
+async function toggleCamGroup(g){
+  if (g.cam){
+    stopStream(g.cam); g.cam = null; g.myvid = null;
+    await Promise.all([...g.peers.values()].filter(p => p.ctr).map(p => p.ctr.sender.replaceTrack(null).catch(()=>{})));
+    updateDoc(doc(g.callRef, 'peers', me.uid), {cam:false}).catch(()=>{});
+    return drawGroupUI();
+  }
+  const st = await getCam(); if (!st) return;
+  g.cam = st; g.myvid = null;
+  [...g.peers.values()].forEach(p => attachCam(g, p));
+  updateDoc(doc(g.callRef, 'peers', me.uid), {cam:true}).catch(()=>{});
+  drawGroupUI();
+}
+function attachScreen(g, p){
+  if (!g.screen) return;
+  const v = g.screen.getVideoTracks()[0], a = g.screen.getAudioTracks()[0];
+  if (p.vtr && v) setSender(p.vtr.sender, v).catch(()=>{});
+  if (p.atr && a) p.atr.sender.replaceTrack(a).catch(()=>{});
+}
+async function toggleShareGroup(g){
+  if (g.screen) return stopShareGroup(g);
+  const st = await getScreen(() => stopShareGroup(g)); if (!st) return;
+  g.screen = st;
+  const tr = st.getVideoTracks()[0];
+  const at = st.getAudioTracks()[0];
+  await Promise.all([...g.peers.values()].filter(p => p.vtr).map(p => Promise.all([setSender(p.vtr.sender, tr).catch(()=>{}), (at && p.atr) ? p.atr.sender.replaceTrack(at).catch(()=>{}) : null])));
+  if (!at) toast('画面だけ共有しました。音も届けるには、共有の選択画面で「システム音声」または「タブの音声」にチェックを入れてください');
+  updateDoc(doc(g.callRef, 'peers', me.uid), {sharing:true}).catch(()=>{});
+  drawGroupUI();
+}
+async function stopShareGroup(g){
+  if (!g.screen) return;
+  stopStream(g.screen); g.screen = null;
+  await Promise.all([...g.peers.values()].filter(p => p.vtr).map(p => Promise.all([p.vtr.sender.replaceTrack(null).catch(()=>{}), p.atr ? p.atr.sender.replaceTrack(null).catch(()=>{}) : null])));
+  updateDoc(doc(g.callRef, 'peers', me.uid), {sharing:false}).catch(()=>{});
+  drawGroupUI();
+}
+const gStatus = g => '通話中 ' + fmtDur(Math.floor((Date.now() - g.startedAt) / 1000)) + '・' + (g.present.size + 1) + '人';
+function drawGroupUI(){
+  const g = gcall; if (!g) return;
+  let ui = $('#gcallUI');
+  if (!ui){ ui = h('div',{class:'callov',id:'gcallUI',role:'dialog','aria-label':'グループ通話'}); document.body.append(ui); }
+  const who = (uid, label, st, vid) => h('div',{class:'gp'+(vid?' cam':'')}, vid || avatar(uid, label, false, false), h('div',{}, label), h('small',{}, st));
+  const peerCam = uid => {
+    const p = g.peers.get(uid);
+    if (!(g.cams[uid] && p && p.cstream)) return null;
+    if (!g.cvids[uid] || g.cvids[uid].srcObject !== p.cstream) g.cvids[uid] = camVid(p.cstream, 'gpv', false);
+    return g.cvids[uid];
+  };
+  if (g.cam && !g.myvid) g.myvid = camVid(g.cam, 'gpv', true);
+  const list = [who(me.uid, myName(), '自分' + (g.muted ? '（ミュート中）' : ''), g.cam ? g.myvid : null)];
+  g.present.forEach(uid => {
+    const p = g.peers.get(uid);
+    list.push(who(uid, g.names[uid] || nameOf(uid), !p || !p.pc ? '待っています…' : p.state === 'active' ? '通話中' : p.state === 'failed' ? '接続できません' : '接続中…', peerCam(uid)));
+  });
+  const sharer = [...g.present].find(u => g.sharing[u] && g.peers.get(u) && g.peers.get(u).vstream);
+  let gv = null;
+  if (sharer){
+    const p = g.peers.get(sharer);
+    if (!g.vids[sharer] || g.vids[sharer].srcObject !== p.vstream) g.vids[sharer] = makeVid(p.vstream);
+    gv = h('div',{class:'gvid'}, g.vids[sharer], h('div',{class:'cstat'}, (g.names[sharer] || nameOf(sharer)) + 'さんの画面'));
+  }
+  ui.replaceChildren(
+    h('div',{class:'cname'}, roomTitle(g.r)),
+    h('div',{class:'cstat',id:'gStat'}, gStatus(g) + (g.screen ? '・画面を共有中' : '')),
+    gv,
+    h('div',{class:'gl'}, list),
+    h('div',{class:'cbtns'},
+      h('button',{class:'cbtn'+(g.muted?' on':''),'aria-label':g.muted?'ミュートを解除':'ミュート',onclick:()=>{ g.muted = !g.muted; g.stream.getAudioTracks().forEach(t => t.enabled = !g.muted); drawGroupUI(); }}, ico(g.muted ? 'micoff' : 'mic', 28)),
+      h('button',{class:'cbtn'+(g.cam?' on':''),'aria-label':g.cam?'カメラをオフにする':'カメラをオンにする',onclick:()=>toggleCamGroup(g)}, ico(g.cam ? 'video' : 'videooff', 28)),
+      h('button',{class:'cbtn'+(g.screen?' on':''),'aria-label':g.screen?'画面共有をやめる':'画面を共有する',onclick:()=>toggleShareGroup(g)}, ico('screen', 28)),
+      h('button',{class:'cbtn red','aria-label':'通話から抜ける',onclick:leaveGroupCall}, ico('phone', 28))));
+  if (gv){ const vv = gv.querySelector('video'); if (vv) vv.play().catch(()=>{}); }
+  document.querySelectorAll('#gcallUI .gl video').forEach(v => v.play().catch(()=>{}));
+}
+async function leaveGroupCall(){
+  const g = gcall; if (!g || g.left) return;
+  g.left = true; gcall = null;
+  clearInterval(g.beat); clearInterval(g.clock);
+  g.unsubs.forEach(f => f());
+  [...g.peers.keys()].forEach(uid => closePeer(g, uid));
+  g.stream.getTracks().forEach(t => t.stop());
+  stopStream(g.screen); g.screen = null; stopStream(g.cam); g.cam = null;
+  const ui = $('#gcallUI'); if (ui) ui.remove();
+  renderHeader();
+  try { await deleteDoc(doc(g.callRef, 'peers', me.uid)); } catch(e){}
+  try {
+    const left = await getDocs(collection(g.callRef, 'peers'));
+    const others = left.docs.filter(d => Date.now() - ms(d.data({serverTimestamps:'estimate'}).ts) < 90000);
+    if (!others.length){
+      await updateDoc(roomRef(g.r), {callState:'ended'});
+      const start = ms(rooms[g.r.id] && rooms[g.r.id].callTs) || g.startedAt;
+      sysMsg(g.r, 'グループ通話が終了しました（' + fmtDur(Math.max(0, Math.round((Date.now() - start) / 1000))) + '）').catch(()=>{});
+    }
+  } catch(e){}
+}
+
+/* ---------- notifications ---------- */
+async function notify(r){
+  const mentioned = (r.lastMentions || []).includes(me.uid);
+  const body = (mentioned ? 'あなた宛: ' : '') + (r.lastMsg || '新しいメッセージ');
+  if (inFocus()){ toast(roomTitle(r) + ': ' + body.slice(0,30)); return; }
+  if (document.hidden && pushDone) return; // 画面が隠れているときは、プッシュ通知が届く（二重に出さない）
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = {body, icon:'icon-192.png?v=2', badge:'icon-192.png?v=2', tag:r.id, renotify:true, silent:isQuiet(), data:{url:'/chat-app/?room='+r.id}};
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    if (reg) await reg.showNotification(roomTitle(r), opts);
+    else new Notification(roomTitle(r), opts);
+  } catch(e){}
+}
+const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function drawBanner(){
+  const b = $('#notifyBanner'); if (!b) return;
+  b.replaceChildren();
+  if (!('Notification' in window)){
+    if (isIos && !isStandalone && !localStorage.getItem('cs_nb_ios')) b.append(h('div',{class:'nbanner'}, h('span',{},'通知を使うには、共有ボタンから「ホーム画面に追加」して、そのアプリから開いてください。'), h('button',{class:'icon-btn',style:'width:30px;height:30px','aria-label':'閉じる',onclick:()=>{ localStorage.setItem('cs_nb_ios','1'); drawBanner(); }}, ico('x',16))));
+    return;
+  }
+  if (Notification.permission !== 'default') return;
+  b.append(h('div',{class:'nbanner'}, ico('bell',18), h('span',{},'新着メッセージの通知を受け取れます'),
+    h('button',{class:'btn',onclick:()=>setupPush(true)},'オンにする')));
+}
+function autoNotify(){
+  drawBanner();
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted'){ setupPush(false); return; }
+  if (Notification.permission !== 'default') return;
+  // ブラウザの決まりで、許可の確認は画面をタップしたときにしか出せません。最初のタップで自動的に確認を出します。
+  if (isIos && !isStandalone) return;
+  const once = () => { document.removeEventListener('pointerdown', once, true); if (Notification.permission === 'default') setupPush(true); };
+  document.addEventListener('pointerdown', once, true);
+}
+async function notifyDiag(){
+  const box = h('div',{style:'display:grid;gap:6px'});
+  const row = (k, v, ok) => box.append(h('div',{class:'urow',style:'align-items:flex-start'},
+    h('div',{class:'n'}, k, h('small',{style:'white-space:pre-wrap;word-break:break-all'}, v)),
+    h('span',{style:'font-weight:700;color:'+(ok===true?'var(--accent)':ok===false?'var(--danger)':'var(--sub)')}, ok===true?'OK':ok===false?'要確認':'')));
+  const btns = h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:6px'});
+  modal('通知の状態', [box, btns]);
+  const perm = 'Notification' in window ? Notification.permission : '非対応';
+  row('許可', perm === 'granted' ? '許可されています' : perm, perm === 'granted');
+  let reg = null;
+  try { reg = await navigator.serviceWorker.getRegistration(); } catch(e){}
+  row('Service Worker', reg ? ('登録済み：' + reg.scope) : '登録されていません', !!reg);
+  let token = null, messaging = null, mod = null;
+  try {
+    mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
+    messaging = mod.getMessaging(fb);
+    reg = await navigator.serviceWorker.ready;
+    token = await mod.getToken(messaging, {vapidKey:VAPID_KEY, serviceWorkerRegistration:reg});
+    row('この端末の通知トークン', token ? ('取得できました（末尾 …' + token.slice(-8) + '）') : '取得できませんでした', !!token);
+  } catch(e){ row('この端末の通知トークン', '取得に失敗：' + (e.code || '') + ' ' + (e.message || e), false); }
+  try {
+    const snap = await getDoc(doc(db,'users',me.uid));
+    const list = (snap.data() || {}).fcmTokens || [];
+    const has = token && list.includes(token);
+    if (token && !has){ await updateDoc(doc(db,'users',me.uid), {fcmTokens: arrayUnion(token)}); row('サーバーへの登録', 'この端末が未登録だったので、今、登録しました。もう一度テストしてみてください', true); }
+    else row('サーバーへの登録', has ? '登録されています（登録済みの端末：' + list.length + '台）' : '登録されていません', !!has);
+  } catch(e){ row('サーバーへの登録', '確認に失敗：' + (e.message || e), false); }
+  btns.append(
+    h('button',{class:'btn',onclick:async()=>{
+      try { const r = await navigator.serviceWorker.ready; await r.showNotification('ChatSpace', {body:'この端末の通知テストです。これが見えれば、表示はできています', icon:'icon-192.png?v=2', tag:'diag'}); toast('通知を出しました。見えますか？'); }
+      catch(e){ toast('通知を出せませんでした：' + (e.message || e)); }
+    }}, 'この端末に通知を出してみる'),
+    h('button',{class:'btn ghost',onclick:async()=>{
+      try {
+        if (!mod) return toast('先に上の項目を確認してください');
+        try { await mod.deleteToken(messaging); } catch(_){}
+        const nt = await mod.getToken(messaging, {vapidKey:VAPID_KEY, serviceWorkerRegistration:await navigator.serviceWorker.ready});
+        const ups = {fcmTokens: arrayUnion(nt)};
+        await updateDoc(doc(db,'users',me.uid), ups);
+        if (token && token !== nt) await updateDoc(doc(db,'users',me.uid), {fcmTokens: arrayRemove(token)});
+        token = nt; toast('通知を登録し直しました');
+      } catch(e){ toast('登録し直せませんでした：' + (e.message || e)); }
+    }}, '通知を登録し直す'));
+}
+let pushDone = false;
+async function testPush(){
+  if (!PUSH_URL) return toast('通知の中継URL（PUSH_URL）がまだ設定されていません');
+  await setupPush(true);
+  if (!pushDone) return;
+  try {
+    const idToken = await me.getIdToken();
+    const r = await fetch(PUSH_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({idToken, test:true})});
+    const j = await r.json();
+    if (j.error) return toast('中継でエラー: ' + j.error);
+    if (!j.tokens) return toast('この端末が登録されていません。通知をオンにし直してください');
+    if (!j.sent) return toast('送信に失敗しました: ' + ((j.errors && j.errors[0]) || '').slice(0, 80));
+    toast('テスト通知を送りました。数秒待ってください（画面を別のタブにすると見えやすいです）');
+  } catch(e){ toast('中継に接続できません。URLを確認してください'); }
+}
+async function setupPush(interactive){
+  if (!('Notification' in window) || !('serviceWorker' in navigator)){ if (interactive) toast('このブラウザは通知に対応していません（iPhoneはホーム画面に追加すると使えます）'); return; }
+  let perm = Notification.permission;
+  if (perm === 'default' && interactive) perm = await Notification.requestPermission();
+  drawBanner();
+  if (perm !== 'granted'){ if (interactive && perm === 'denied') toast('通知がブロックされています。ブラウザの設定から許可してください'); return; }
+  if (pushDone){ if (interactive) toast('通知はオンです'); return; }
+  try {
+    const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
+    const reg = await navigator.serviceWorker.ready;
+    const token = await getToken(getMessaging(fb), {vapidKey:VAPID_KEY, serviceWorkerRegistration:reg});
+    if (token) await updateDoc(doc(db,'users',me.uid), {fcmTokens: arrayUnion(token)});
+    pushDone = true;
+    if (interactive) toast('通知をオンにしました');
+  } catch(e){ console.warn('push', e); if (interactive) toast('通知の設定に失敗しました'); }
+}
+</script>
+</body>
+</html>
