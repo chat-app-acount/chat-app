@@ -126,7 +126,7 @@ export default {
           const urls = raw.filter(url =>
             typeof url === "string" &&
             /^(stun|stuns|turn|turns):/i.test(url) &&
-            !/:53(?:\\?|$)/.test(url)
+            !url.includes(":53?") && !url.endsWith(":53")
           );
           return { ...server, urls };
         })
