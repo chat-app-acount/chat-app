@@ -1081,7 +1081,7 @@ function activitySettingsModal(){
     sw.onclick=()=>{ const next=sw.classList.toggle('on'); sw.setAttribute('aria-pressed',String(next)); draft[key]=next; };
     return h('div',{class:'activity-setting'},h('div',{},h('b',{},title),h('small',{},desc)),sw);
   };
-  const info=h('div',{class:'activity-intro'},'共有先は、DMを開始した相手だけです。Webサイトやアプリの利用状況を自動で検出することはありません。利用時間の記録はこの端末のブラウザ内だけに保存されます。');
+  const info=h('div',{class:'activity-intro'},'共有先はDM相手だけです。自動検出するのはオンライン状態・端末種別・ChatSpace内の利用状態のみです。他のWebサイトやアプリの内容は取得しません。利用時間はこの端末のブラウザ内だけに保存されます。');
   const body=h('div',{class:'activity-panel'},
     info,
     makeSwitch('オンライン状態','オンライン・離席・オフラインを自動検出して表示','activityStatus',opts.status),
