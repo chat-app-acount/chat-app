@@ -511,7 +511,7 @@ function startApp(){
           h('div',{class:'launcher-title'},'CHATSPACE 4.0'),
           h('button',{class:'launch-btn primary',onclick:()=>{listFilter='all';drawFilters();renderRooms();}},ico('msg',17),h('span',{},'チャット')),
           h('button',{class:'launch-btn',onclick:()=>{listFilter='dm';drawFilters();renderRooms();}},ico('users',17),h('span',{},'DM・フレンド')),
-          h('button',{class:'launch-btn',onclick:roomModal},ico('plus',17),h('span',{},'ルームを作る')),
+          h('button',{class:'launch-btn',onclick:roomModal},ico('edit',17),h('span',{},'ルームを作る')),
           h('button',{class:'launch-btn',onclick:dmModal},ico('user',17),h('span',{},'友だちを探す')),
           h('button',{class:'launch-btn',onclick:()=>cur?gameModal():toast('ゲームを遊ぶには、先にチャットルームを開いてください')},ico('game',17),h('span',{},'ゲーム')),
           h('button',{class:'launch-btn',onclick:()=>cur?memoModal(rooms[cur]):toast('個人メモを使うには、先にチャットルームを開いてください')},ico('memo',17),h('span',{},'メモ')),
