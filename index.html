@@ -1073,10 +1073,11 @@ function watchDmActivity(r){
   }
 }
 function activitySettingsModal(){
+  const draft={...prefs};
   const opts=activityOptions();
   const makeSwitch=(title,desc,key,checked)=>{
     const sw=h('button',{type:'button',class:'activity-switch'+(checked?' on':''),'aria-pressed':String(checked),'aria-label':title});
-    sw.onclick=()=>{ const next=sw.classList.toggle('on'); sw.setAttribute('aria-pressed',String(next)); prefs[key]=next; };
+    sw.onclick=()=>{ const next=sw.classList.toggle('on'); sw.setAttribute('aria-pressed',String(next)); draft[key]=next; };
     return h('div',{class:'activity-setting'},h('div',{},h('b',{},title),h('small',{},desc)),sw);
   };
   const label=h('input',{class:'field',maxlength:'40',placeholder:'例：勉強中・ゲーム中・休憩中',value:prefs.activityText||''});
@@ -1090,10 +1091,11 @@ function activitySettingsModal(){
     makeSwitch('最終オンライン','最後にアクセスした時刻を表示','activityLastSeen',opts.lastSeen),
     h('div',{class:'activity-private'},h('b',{},'自分だけの利用時間'),h('div',{style:'font-size:20px;font-weight:700;margin-top:4px'},durationText(privateUsageToday())),h('small',{},'今日このブラウザでChatSpaceを開いていた時間。ほかの人には共有されません。')),
     h('button',{class:'btn',onclick:async()=>{
-      prefs.activityText=label.value.trim().slice(0,40);
+      draft.activityText=label.value.trim().slice(0,40);
+      prefs={...prefs,...draft};
       try {
         await setDoc(prefsRef(),{
-          activityStatus:prefs.activityStatus!==false,
+          activityStatus:prefs.activityStatus===true,
           activityDevice:prefs.activityDevice===true,
           activityLabel:prefs.activityLabel===true,
           activityLastSeen:prefs.activityLastSeen===true,
