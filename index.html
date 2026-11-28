@@ -1047,7 +1047,7 @@ function durationText(msValue){
 async function publishDmActivity(statusOverride, onlyRoomId=null){
   if (!me || !Object.keys(rooms).length) return;
   const opts=activityOptions(), nowStatus=statusOverride || (document.hidden?'away':'online');
-  const targets=Object.values(rooms).filter(r=>isDm(r) && (r.members||[]).includes(me.uid) && (!onlyRoomId || r.id===onlyRoomId));
+  const targets=Object.values(rooms).filter(r=>isDm(r) && (r.members||[]).includes(me.uid) && (onlyRoomId === '*' || r.id===onlyRoomId));
   await Promise.all(targets.map(async r=>{
     const jobs=[];
     jobs.push(setDoc(activityRef(r,'presence'),{status:nowStatus,share:opts.status,updatedAt:serverTimestamp()},{merge:true}));
@@ -1099,7 +1099,7 @@ function activitySettingsModal(){
           activityLastSeen:prefs.activityLastSeen===true,
           activityText:prefs.activityText
         },{merge:true});
-        await publishDmActivity(document.hidden?'away':'online');
+        await publishDmActivity(document.hidden?'away':'online','*');
         close(); toast('共有設定を保存しました');
       } catch(e){ console.error(e); toast('設定を保存できませんでした'); }
     }},'設定を保存する')
