@@ -343,12 +343,21 @@ function confirmBox(title, text, okLabel){
 function popup(anchor, items){
   document.querySelectorAll('.popup').forEach(x=>x.remove());
   const r = anchor.getBoundingClientRect();
-  const p = h('div',{class:'popup'}, items.map(it => h('button',{class:it.danger?'danger':'',onclick:()=>{p.remove(); it.run();}}, ico(it.icon,18), it.label)));
+  const p = h('div',{class:'popup',role:'menu'}, items.map(it => h('button',{type:'button',role:'menuitem',class:it.danger?'danger':'',onclick:e=>{e.stopPropagation();p.remove();it.run();}}, ico(it.icon,18), it.label)));
+  p.addEventListener('click',e=>e.stopPropagation());
   document.body.append(p);
-  const w = p.offsetWidth;
-  p.style.top = (r.bottom + 6) + 'px';
-  p.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
-  setTimeout(()=>document.addEventListener('click', function f(){ p.remove(); document.removeEventListener('click', f); }), 0);
+  const margin = 8, gap = 6, rect = p.getBoundingClientRect();
+  const below = window.innerHeight - r.bottom - margin;
+  const above = r.top - margin;
+  p.style.maxHeight = Math.max(120, window.innerHeight - margin*2) + 'px';
+  p.style.overflowY = 'auto';
+  const top = rect.height + gap <= below ? r.bottom + gap : (rect.height + gap <= above ? r.top - rect.height - gap : Math.max(margin, window.innerHeight - rect.height - margin));
+  p.style.top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, top)) + 'px';
+  p.style.left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, r.right - rect.width)) + 'px';
+  const outside = e => { if (!p.contains(e.target) && !anchor.contains(e.target)){ p.remove(); document.removeEventListener('pointerdown',outside,true); } };
+  const escape = e => { if(e.key==='Escape'){p.remove();document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape);} };
+  document.addEventListener('pointerdown',outside,true);
+  document.addEventListener('keydown',escape);
 }
 
 const app = $('#app');
@@ -899,7 +908,6 @@ function renderHeader(){
     avatar(other || r.createdBy || r.id, roomTitle(r), true, other && isOnline(other)),
     h('div',{class:'titles'}, h('div',{class:'t'},roomTitle(r)), h('div',{class:cls},sub)),
     h('button',{class:'icon-btn','aria-label':'通話',onclick:e => popup(e.currentTarget,[{icon:'phone',label:'音声通話',run:() => isDm(r) ? startCall(false) : groupCallAction(false)},{icon:'video',label:'ビデオ通話',run:() => isDm(r) ? startCall(true) : groupCallAction(true)}])}, ico('phone')),
-    h('button',{class:'icon-btn','aria-label':'検索',onclick:searchModal}, ico('search')),
     h('button',{class:'icon-btn','aria-label':'ルームのメニュー',onclick:e=>roomMenu(e.currentTarget)}, ico('more')));
   const pb = $('#pinBar');
   if (pb){
@@ -1217,7 +1225,14 @@ function composer(){
     sug.hidden = false;
   };
   const pollBtn = h('button',{class:'icon-btn','aria-label':'投票を作る',onclick:pollModal}, ico('poll',24));
-  const appsBtn = h('button',{class:'icon-btn','aria-label':'アプリメニュー',onclick:e => popup(e.currentTarget,[{icon:'edit',label:'ルームを作る',run:roomModal},{icon:'user',label:'友だちを探す',run:dmModal},{icon:'game',label:'ミニゲーム',run:gameModal},{icon:'memo',label:'メモ',run:() => memoModal(rooms[cur])},{icon:'search',label:'チャット検索',run:searchModal},...(isGroupRoom ? [{icon:'poll',label:'投票',run:pollModal}] : []),{icon:'clock',label:'時間指定',run:scheduleModal},{icon:'brush',label:'お絵描き',run:drawModal}])}, ico('grid9',24));
+  const appsBtn = h('button',{class:'icon-btn','aria-label':'アプリメニュー',title:'ゲーム・メモ・検索など',onclick:e => popup(e.currentTarget,[
+    {icon:'game',label:'ミニゲーム',run:()=>{if(!rooms[cur])return toast('先にルームまたはDMを開いてください');gameModal();}},
+    {icon:'memo',label:'メモ',run:()=>{if(!rooms[cur])return toast('先にルームまたはDMを開いてください');memoModal(rooms[cur]);}},
+    {icon:'search',label:'チャット検索',run:()=>{if(!rooms[cur])return toast('先にルームまたはDMを開いてください');searchModal();}},
+    {icon:'clock',label:'時間指定メッセージ',run:()=>{if(!rooms[cur])return toast('先にルームまたはDMを開いてください');scheduleModal();}},
+    {icon:'brush',label:'お絵描き',run:()=>{if(!rooms[cur])return toast('先にルームまたはDMを開いてください');drawModal();}},
+    ...(isGroupRoom ? [{icon:'poll',label:'投票',run:pollModal}] : [])
+  ])}, ico('grid9',24));
   const gameBtn = h('button',{class:'icon-btn','aria-label':'ミニゲーム',onclick:gameModal}, ico('game',24));
   const schedBtn = h('button',{class:'icon-btn','aria-label':'時間指定メッセージ',onclick:scheduleModal}, ico('clock',24));
   const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,140) + 'px'; sendBtn.disabled = !ta.value.trim(); };
