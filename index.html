@@ -185,6 +185,36 @@ input,textarea{font:inherit;color:inherit}
 .room-tool-row button.on{background:var(--hover);border-color:var(--accent);color:var(--ink);font-weight:700}
 .room-tool-row .hint{font-size:11px;color:var(--sub)}
 
+
+.discover-body{display:grid;gap:16px}
+.discover-intro{display:grid;gap:3px;padding:4px 2px 8px}
+.discover-intro b{font-size:15px}
+.discover-intro span{font-size:12px;color:var(--sub)}
+.discover-section{display:grid;gap:8px}
+.discover-label{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--sub);padding:0 2px}
+.discover-card{display:flex;align-items:center;gap:12px;width:100%;padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--bg);text-align:left;transition:transform .15s,border-color .15s,background .15s}
+.discover-card:hover{border-color:var(--accent);background:var(--hover);transform:translateY(-1px)}
+.discover-icon{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:13px;background:var(--hover);color:var(--accent)}
+.discover-copy{display:grid;gap:2px;flex:1;min-width:0}
+.discover-copy b{font-size:14px}
+.discover-copy small{font-size:11px;color:var(--sub);line-height:1.45}
+.discover-tag{font-size:10px;font-weight:700;color:var(--sub);border:1px solid var(--line);padding:4px 7px;border-radius:999px;white-space:nowrap}
+.discover-card.official{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--panel))}
+.discover-card.official .discover-icon{background:var(--accent);color:var(--accent-ink)}
+.discover-card.official .discover-tag{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.support-hero{display:flex;gap:12px;align-items:center;padding:13px;border-radius:15px;background:var(--hover)}
+.support-mark{width:46px;height:46px;border-radius:14px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.support-hero p{font-size:12px;color:var(--sub);margin-top:3px}
+.support-label{font-size:12px;font-weight:700;margin-bottom:-8px}
+.support-history-head{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--line);font-size:13px}
+.support-history-head .linklike{font-size:12px}
+.support-history-item{display:grid;gap:5px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.support-history-top{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.support-history-top span{color:var(--accent);font-weight:700;white-space:nowrap}
+.support-history-text{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.support-history-item small{font-size:10px;color:var(--sub)}
+.support-reply{font-size:12px;padding:8px;border-radius:9px;background:var(--hover);white-space:pre-wrap;overflow-wrap:anywhere}
+
 .ver{font-size:11px;color:var(--sub);text-align:center;padding:6px 0 10px}
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
 .swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
@@ -581,16 +611,75 @@ function drawFilters(){
   );
 }
 function discoverModal(){
-  const item=(ic,title,desc,run)=>h('button',{class:'urow',style:'width:100%;text-align:left;padding:12px;border:1px solid var(--line);border-radius:12px;margin:5px 0;display:flex;align-items:center;gap:12px',onclick:()=>{close();run();}},
-    h('span',{style:'width:38px;height:38px;border-radius:11px;background:var(--hover);display:grid;place-items:center;color:var(--accent);flex:none'},ico(ic,20)),
-    h('span',{style:'display:grid;gap:3px;min-width:0'},h('b',{},title),h('small',{style:'color:var(--sub);font-size:12px'},desc))
+  const card = (ic,title,desc,tag,run,accent=false) => h('button',{
+    type:'button',class:'discover-card'+(accent?' official':''),
+    onclick:()=>{ close(); run(); }
+  },
+    h('span',{class:'discover-icon'},ico(ic,22)),
+    h('span',{class:'discover-copy'},h('b',{},title),h('small',{},desc)),
+    h('span',{class:'discover-tag'},tag)
   );
-  const close=modal('新しく探す',[
-    h('div',{style:'font-size:13px;color:var(--sub);margin-bottom:6px'},'友だちやルームを見つけて、会話を始めましょう。'),
-    item('user','友だちを探す','名前で検索してDMを始める',dmModal),
-    item('edit','ルームを作る','新しいグループチャットを作成',roomModal),
-    item('link','ルームに参加する','ルームIDまたは共有リンクで参加',()=>{roomModal();setTimeout(()=>{$('.tabs button')[1]?.click();},80);})
+  let close;
+  const body = h('div',{class:'discover-body'},
+    h('div',{class:'discover-intro'},h('b',{},'次にやりたいことを選んでください'),h('span',{},'友だちとの会話も、新しいルームへの参加もここから。')),
+    h('div',{class:'discover-section'},h('div',{class:'discover-label'},'つながる'),
+      card('user','友だちを探す','メンバーを名前で検索してDMを開始','DM',dmModal),
+      card('users','ルームを作る','友だちを招待してグループを作成','作成',roomModal),
+      card('link','ルームに参加する','ルームIDまたは共有リンクを入力','参加',()=>roomModal('join'))
+    ),
+    h('div',{class:'discover-section'},h('div',{class:'discover-label'},'ChatSpace公式'),
+      card('msg','お問い合わせ・要望','不具合の報告、改善アイデア、質問を運営へ送る','公式窓口',supportModal,true)
+    )
+  );
+  close = modal('新しく探す', [body]);
+}
+async function supportModal(){
+  const category = h('select',{class:'field'},[
+    h('option',{value:'お問い合わせ'},'お問い合わせ'),
+    h('option',{value:'機能の要望'},'機能の要望'),
+    h('option',{value:'不具合の報告'},'不具合の報告'),
+    h('option',{value:'その他'},'その他')
   ]);
+  const subject = h('input',{class:'field',maxlength:'80',placeholder:'件名（例：通知が届かない）'});
+  const message = h('textarea',{class:'field',rows:'6',maxlength:'3000',placeholder:'内容をできるだけ具体的に入力してください。\n\n※パスワードや認証コードなどは入力しないでください。'});
+  const status = h('div',{style:'font-size:12px;color:var(--sub)'},'送信内容はChatSpace運営の管理画面に届きます。');
+  const history = h('div',{style:'display:grid;gap:8px'});
+  const loadHistory = async()=>{
+    history.replaceChildren(h('div',{style:'font-size:12px;color:var(--sub)'},'履歴を読み込み中…'));
+    try{
+      const sn=await getDocs(query(collection(db,'reports'),where('byUid','==',me.uid)));
+      const rows=sn.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.type==='support').sort((a,b)=>ms(b.ts)-ms(a.ts)).slice(0,10);
+      history.replaceChildren(...(rows.length?rows.map(x=>h('div',{class:'support-history-item'},
+        h('div',{class:'support-history-top'},h('b',{},x.subject||x.category||'お問い合わせ'),h('span',{},x.status==='done'?'対応済み':'受付済み')),
+        h('div',{class:'support-history-text'},x.text||''),
+        x.note?h('div',{class:'support-reply'},h('b',{},'運営からの返信'),h('div',{},x.note)):null,
+        h('small',{},x.ts?new Date(ms(x.ts)).toLocaleString('ja-JP'):'送信済み')
+      )):[h('div',{style:'font-size:13px;color:var(--sub)'},'まだお問い合わせ履歴はありません。')]));
+    }catch(e){history.replaceChildren(h('div',{style:'font-size:12px;color:var(--sub)'},'履歴を表示できません。送信済みの内容は運営側で確認できます。'));}
+  };
+  const close=modal('ChatSpace公式窓口',[
+    h('div',{class:'support-hero'},h('div',{class:'support-mark'},ico('msg',24)),h('div',{},h('b',{},'運営に直接メッセージ'),h('p',{},'お問い合わせ・機能の要望・不具合報告を送れます。'))),
+    h('label',{class:'support-label'},'お問い合わせの種類'),category,
+    h('label',{class:'support-label'},'件名'),subject,
+    h('label',{class:'support-label'},'内容'),message,
+    status,
+    h('button',{class:'btn',style:'width:100%',onclick:async()=>{
+      const title=subject.value.trim(), text=message.value.trim();
+      if(!title) return toast('件名を入力してください');
+      if(text.length<5) return toast('内容を5文字以上入力してください');
+      const send=document.querySelector('.support-send-lock');
+      if(send) return;
+      status.textContent='送信しています…';
+      try{
+        await addDoc(collection(db,'reports'),{type:'support',category:category.value,subject:title,text,fromUid:me.uid,byUid:me.uid,roomId:'official',roomName:'ChatSpace公式窓口',ts:serverTimestamp(),status:'open'});
+        subject.value='';message.value='';status.textContent='送信しました。運営が確認します。';
+        toast('公式窓口に送信しました');await loadHistory();
+      }catch(e){console.error(e);status.textContent='送信できませんでした。時間をおいて再度お試しください。';toast('送信できませんでした（Firestoreのルールを確認してください）');}
+    }},'運営に送信する'),
+    h('div',{class:'support-history-head'},h('b',{},'送信履歴'),h('button',{class:'linklike',onclick:loadHistory},'更新')),
+    history
+  ]);
+  loadHistory();
 }
 
 /* ---------- listeners ---------- */
@@ -696,7 +785,7 @@ function adminPanel(){
         rows.push(h('div',{style:'margin-bottom:6px'}, sb(showDone ? '未対応を見る' : '対応済みを見る','ghost',()=>{ showDone = !showDone; draw(); })));
         const sn = await getDocs(collection(db,'reports'));
         sn.docs.filter(d => (d.data().status === 'done') === showDone).sort((a,b) => ms(b.data().ts) - ms(a.data().ts)).forEach(d => { const x = d.data(); rows.push(row(
-          h('div',{}, h('b',{}, nameOf(x.fromUid) + ' の発言'), '（' + x.roomName + '）', small(x.text), small('通報者 ' + nameOf(x.byUid) + '｜' + when(x.ts) + (x.note ? '｜対応メモ：' + x.note : ''))),
+          h('div',{}, h('b',{}, x.type === 'support' ? '公式窓口：' + (x.category || 'お問い合わせ') : nameOf(x.fromUid) + ' の発言'), '（' + (x.subject || x.roomName || 'ChatSpace') + '）', small(x.text), small(x.type === 'support' ? '送信者 ' + nameOf(x.byUid) + '｜' + when(x.ts) + (x.note ? '｜運営返信：' + x.note : '') : '通報者 ' + nameOf(x.byUid) + '｜' + when(x.ts) + (x.note ? '｜対応メモ：' + x.note : ''))),
           h('div',{style:'display:grid;gap:4px'}, x.status === 'done' ? sb('未対応に戻す','ghost',()=>updateDoc(d.ref,{status:'open'}).then(draw)) : sb('対応済み','ghost',()=>{ const n = prompt('対応メモ（空でもOK）', ''); if (n === null) return; updateDoc(d.ref,{status:'done', note:n, doneAt:serverTimestamp()}).then(()=>{ logAdmin('通報を対応済み', nameOf(x.fromUid), n); draw(); }); }), sb('送信者を停止','danger',() => ban({uid:x.fromUid, name:nameOf(x.fromUid)}, true))))); });
         if (rows.length < 2) rows.push(h('div',{class:'empty'},'ありません'));
       } else if (tab === 'log'){
