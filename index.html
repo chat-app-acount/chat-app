@@ -1016,7 +1016,7 @@ function drawModal(){
 const activityTypes = ['presence','devices','activities','lastSeen'];
 const activityRef = (r, type, uid=me.uid) => doc(db,'dms',r.id,type,uid);
 const activityOptions = () => ({
-  status: prefs.activityStatus !== false,
+  status: prefs.activityStatus === true,
   device: prefs.activityDevice === true,
   label: prefs.activityLabel === true,
   lastSeen: prefs.activityLastSeen === true
@@ -1135,7 +1135,7 @@ function renderRooms(){
     const title = roomTitle(r), other = isDm(r) ? otherUid(r) : null;
     const unread = isUnread(r);
     list.append(h('button',{class:'room'+(r.id===cur?' active':'')+(unread?' unread':''),onclick:()=>openRoom(r.id)},
-      avatar(other || r.createdBy || r.id, title, false, other && isOnline(other)),
+      avatar(other || r.createdBy || r.id, title, false, false),
       h('div',{class:'meta'},
         h('div',{class:'top'}, h('div',{class:'name'},title), h('div',{class:'time'},fmtList(r.lastMsgTs))),
         h('div',{class:'last'}, r.lastMsg || (isDm(r) ? 'メッセージを送ってみましょう' : (r.desc || 'ルームID: '+r.id)))),
@@ -1174,11 +1174,11 @@ function renderHeader(){
   const typing = Object.entries(r.typing || {}).filter(([u,t]) => u !== me.uid && Date.now() - ms(t) < 4000).map(([u]) => nameOf(u));
   let sub, cls = 's';
   if (typing.length){ sub = typing.join('、') + 'が入力中…'; cls += ' typing'; clearTimeout(typingTimer); typingTimer = setTimeout(renderHeader, 4200); }
-  else if (isDm(r)) sub = dmActivitySummary() || (isOnline(other) ? 'オンライン' : 'オフライン');
+  else if (isDm(r)) sub = dmActivitySummary() || 'アクティビティ非共有';
   else sub = (r.members||[]).length + '人のメンバー' + (r.desc ? '・' + r.desc : '');
   head.replaceChildren(
     h('button',{class:'icon-btn back','aria-label':'一覧に戻る',onclick:()=>document.body.classList.remove('in-chat')}, ico('back')),
-    avatar(other || r.createdBy || r.id, roomTitle(r), true, other && isOnline(other)),
+    avatar(other || r.createdBy || r.id, roomTitle(r), true, !!(dmActivity.presence?.share && dmActivity.presence.status === 'online')),
     h('div',{class:'titles'}, h('div',{class:'t'},roomTitle(r)), h('div',{class:cls},sub)),
     h('button',{class:'icon-btn','aria-label':'通話',onclick:e => popup(e.currentTarget,[{icon:'phone',label:'音声通話',run:() => isDm(r) ? startCall(false) : groupCallAction(false)},{icon:'video',label:'ビデオ通話',run:() => isDm(r) ? startCall(true) : groupCallAction(true)}])}, ico('phone')),
     h('button',{class:'icon-btn','aria-label':'ルームのメニュー',onclick:e=>roomMenu(e.currentTarget)}, ico('more')));
@@ -1785,7 +1785,7 @@ function dmModal(){
   const draw = () => {
     const key = q.value.trim().toLowerCase();
     const arr = Object.entries(users).filter(([u,d]) => u !== me.uid && d.name && (!key || d.name.toLowerCase().includes(key))).sort((a,b)=>a[1].name.localeCompare(b[1].name,'ja'));
-    list.replaceChildren(...(arr.length ? arr.map(([u,d]) => h('button',{class:'urow',onclick:async()=>{ close(); await startDm(u); }}, avatar(u,d.name,true,isOnline(u)), h('div',{class:'n'}, d.name, h('small',{}, isOnline(u) ? 'オンライン' : 'オフライン')))) : [h('div',{class:'empty'},'見つかりませんでした。共有リンクで友だちを呼びましょう。')]));
+    list.replaceChildren(...(arr.length ? arr.map(([u,d]) => h('button',{class:'urow',onclick:async()=>{ close(); await startDm(u); }}, avatar(u,d.name,true,isOnline(u)), h('div',{class:'n'}, d.name, h('small',{}, 'DMを開始できます')))) : [h('div',{class:'empty'},'見つかりませんでした。共有リンクで友だちを呼びましょう。')]));
   };
   q.addEventListener('input', draw); draw();
   close = modal('DMを始める', [q, list]);
