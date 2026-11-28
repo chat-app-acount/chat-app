@@ -285,6 +285,19 @@ input,textarea{font:inherit;color:inherit}
 body.hide-read .rd{display:none}
 
 /* 4.0 app shortcuts are grouped in the 3x3 app menu */
+
+/* ===== Activity sharing ===== */
+.activity-panel{display:grid;gap:12px}
+.activity-intro{padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--hover);font-size:13px;line-height:1.6;color:var(--sub)}
+.activity-setting{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.activity-setting b{display:block;font-size:14px}
+.activity-setting small{display:block;color:var(--sub);font-size:12px;margin-top:2px}
+.activity-switch{width:44px;height:26px;border:0;border-radius:20px;background:var(--line);position:relative;cursor:pointer;flex:none}
+.activity-switch:after{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:white;transition:transform .16s}
+.activity-switch.on{background:var(--accent)}
+.activity-switch.on:after{transform:translateX(18px)}
+.activity-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;background:var(--hover);font-size:11px;color:var(--sub);margin-top:3px}
+.activity-private{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:13px}
 </style>
 </head>
 <body>
@@ -424,6 +437,7 @@ const STAMPS = {
   'その他':'🎉 🎂 🎁 🔥 ✨ ⭐ 🌈 ☀️ 🌙 ⚡ 💯 ✅ ❌ 🎮 🎵 💤'
 };
 let me = null, pendingName = null, users = {}, rooms = {};
+let dmActivity = {}, dmActivityUnsubs = [], activityBeatAt = 0, usageStartedAt = Date.now();
 let cur = null, unsubMsgs = null, unsubUsers = null, unsubCols = [], hb = null;
 let curEls = new Map(), msgCache = new Map(), replyTo = null, listFilter = 'all', roomSearch = '', unreadOnly = false;
 let readMap = {}; try { readMap = JSON.parse(localStorage.getItem('cs_read') || '{}'); } catch(e){}
@@ -533,7 +547,7 @@ async function logout(){
 }
 function teardown(){
   unsubMsgs?.(); unsubUsers?.(); unsubCols.forEach(f=>f()); clearInterval(hb);
-  unsubMsgs = unsubUsers = null; unsubCols = []; cur = null; rooms = {}; users = {}; me = null;
+  unsubMsgs = unsubUsers = null; unsubCols = []; stopDmActivityWatch(); cur = null; rooms = {}; users = {}; me = null;
   document.body.classList.remove('in-chat');
   document.removeEventListener('visibilitychange', onVisible);
 }
@@ -549,6 +563,7 @@ function startApp(){
           h('button',{class:'icon-btn',id:'themeBtn','aria-label':'テーマを切り替え',onclick:cycleTheme}, ico(themeIcon())),
           h('button',{class:'icon-btn','aria-label':'メニュー',onclick:e=>popup(e.currentTarget,[
             {icon:'user',label:'プロフィールを編集',run:profileModal},
+            {icon:'clock',label:'アクティビティ共有・利用時間',run:activitySettingsModal},
             {icon:'bell',label:'通知をオンにする',run:()=>setupPush(true)},
             {icon:'bell',label:'通知の状態を確認',run:notifyDiag},
             {icon:'belloff',label:isQuiet() ? '静かモードをオフにする' : '静かモードをオンにする（音を鳴らさない）',run:toggleQuiet},
@@ -570,12 +585,12 @@ function startApp(){
       h('main',{class:'main',id:'main'}, welcome())));
   drawFilters();
   listenUsers(); listenRooms();
-  const beat = () => { if (me && !document.hidden) updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); };
+  const beat = () => { if (me && !document.hidden) { updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{}); publishDmActivity('online'); } };
   hb = setInterval(beat, 120000);
   clearInterval(schedT); schedT = setInterval(runSched, 15000); setTimeout(runSched, 3000);
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('focus', onVisible);
-  window.addEventListener('pagehide', () => { if (me) updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
+  window.addEventListener('pagehide', () => { if (me) { updateDoc(doc(db,'users',me.uid),{online:false}).catch(()=>{}); publishDmActivity('offline'); savePrivateUsage(); } if (call) updateDoc(roomRef(call.r),{callState:'ended'}).catch(()=>{}); if (gcall) deleteDoc(doc(gcall.callRef,'peers',me.uid)).catch(()=>{}); });
   document.addEventListener('click', e => { const p = $('#stamps'); if (p && !p.contains(e.target) && !e.target.closest('#stampBtn')) p.classList.remove('show'); });
   autoNotify();
   navigator.serviceWorker?.addEventListener('message', e => {
@@ -590,6 +605,7 @@ const welcome = () => h('div',{class:'welcome'}, h('div',{}, h('div',{style:'fon
 function onVisible(){
   if (!me || document.hidden) return;
   updateDoc(doc(db,'users',me.uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{});
+  publishDmActivity('online');
   flushRead();
 }
 function drawFilters(){
@@ -995,6 +1011,112 @@ function drawModal(){
     h('div',{style:'margin-top:10px'}, h('button',{class:'btn',onclick:()=>{ cv.toBlob(b => { close(); sendImage(new File([b],'drawing.png',{type:'image/png'})); }, 'image/png'); }}, '送信'))]);
 }
 
+
+/* ---------- DM activity sharing ---------- */
+const activityTypes = ['presence','devices','activities','lastSeen'];
+const activityRef = (r, type, uid=me.uid) => doc(db,'dms',r.id,type,uid);
+const activityOptions = () => ({
+  status: prefs.activityStatus !== false,
+  device: prefs.activityDevice === true,
+  label: prefs.activityLabel === true,
+  lastSeen: prefs.activityLastSeen === true
+});
+function currentActivityDevice(){ return isMobile ? 'mobile' : 'pc'; }
+function savePrivateUsage(){
+  try {
+    const key='cs_private_usage_v1', old=JSON.parse(localStorage.getItem(key)||'{}');
+    const day=new Date().toLocaleDateString('sv-SE');
+    old[day]=(Number(old[day])||0)+Math.max(0,Date.now()-usageStartedAt);
+    localStorage.setItem(key,JSON.stringify(old));
+    usageStartedAt=Date.now();
+  } catch(e){}
+}
+function privateUsageToday(){
+  try { const x=JSON.parse(localStorage.getItem('cs_private_usage_v1')||'{}'); return Number(x[new Date().toLocaleDateString('sv-SE')])||0; }
+  catch(e){ return 0; }
+}
+function durationText(msValue){
+  const m=Math.floor(msValue/60000), h=Math.floor(m/60);
+  return h ? h+'時間'+(m%60)+'分' : m+'分';
+}
+async function publishDmActivity(statusOverride){
+  if (!me || !Object.keys(rooms).length) return;
+  const opts=activityOptions(), nowStatus=statusOverride || (document.hidden?'away':'online');
+  const targets=Object.values(rooms).filter(r=>isDm(r) && (r.members||[]).includes(me.uid));
+  await Promise.all(targets.map(async r=>{
+    const jobs=[];
+    jobs.push(setDoc(activityRef(r,'presence'),{status:nowStatus,share:opts.status,updatedAt:serverTimestamp()},{merge:true}));
+    jobs.push(setDoc(activityRef(r,'devices'),{device:currentActivityDevice(),share:opts.device,updatedAt:serverTimestamp()},{merge:true}));
+    jobs.push(setDoc(activityRef(r,'activities'),{label:(prefs.activityText||'').slice(0,40),share:opts.label,updatedAt:serverTimestamp()},{merge:true}));
+    jobs.push(setDoc(activityRef(r,'lastSeen'),{at:serverTimestamp(),share:opts.lastSeen},{merge:true}));
+    await Promise.all(jobs).catch(e=>console.warn('activity publish',e));
+  }));
+}
+function stopDmActivityWatch(){
+  dmActivityUnsubs.forEach(fn=>fn()); dmActivityUnsubs=[]; dmActivity={};
+}
+function watchDmActivity(r){
+  stopDmActivityWatch();
+  if (!r || !isDm(r)) return;
+  const peer=otherUid(r);
+  for (const type of activityTypes){
+    const unsub=onSnapshot(activityRef(r,type,peer),sn=>{
+      dmActivity[type]=sn.exists()?sn.data():null;
+      renderHeader();
+    },()=>{ dmActivity[type]=null; renderHeader(); });
+    dmActivityUnsubs.push(unsub);
+  }
+}
+function activitySettingsModal(){
+  const opts=activityOptions();
+  const makeSwitch=(title,desc,key,checked)=>{
+    const sw=h('button',{type:'button',class:'activity-switch'+(checked?' on':''),'aria-pressed':String(checked),'aria-label':title});
+    sw.onclick=()=>{ const next=sw.classList.toggle('on'); sw.setAttribute('aria-pressed',String(next)); prefs[key]=next; };
+    return h('div',{class:'activity-setting'},h('div',{},h('b',{},title),h('small',{},desc)),sw);
+  };
+  const label=h('input',{class:'field',maxlength:'40',placeholder:'例：勉強中・ゲーム中・休憩中',value:prefs.activityText||''});
+  const info=h('div',{class:'activity-intro'},'共有先は、DMを開始した相手だけです。Webサイトやアプリの利用状況を自動で検出することはありません。利用時間の記録はこの端末のブラウザ内だけに保存されます。');
+  const body=h('div',{class:'activity-panel'},
+    info,
+    makeSwitch('オンライン状態','オンライン・離席・オフラインをDM相手に表示','activityStatus',opts.status),
+    makeSwitch('使用端末','PCかスマートフォンかを表示','activityDevice',opts.device),
+    makeSwitch('活動内容','下の入力欄に自分で入力した内容を表示','activityLabel',opts.label),
+    h('label',{},'共有する活動内容'),label,
+    makeSwitch('最終オンライン','最後にアクセスした時刻を表示','activityLastSeen',opts.lastSeen),
+    h('div',{class:'activity-private'},h('b',{},'自分だけの利用時間'),h('div',{style:'font-size:20px;font-weight:700;margin-top:4px'},durationText(privateUsageToday())),h('small',{},'今日このブラウザでChatSpaceを開いていた時間。ほかの人には共有されません。')),
+    h('button',{class:'btn',onclick:async()=>{
+      prefs.activityText=label.value.trim().slice(0,40);
+      try {
+        await setDoc(prefsRef(),{
+          activityStatus:prefs.activityStatus!==false,
+          activityDevice:prefs.activityDevice===true,
+          activityLabel:prefs.activityLabel===true,
+          activityLastSeen:prefs.activityLastSeen===true,
+          activityText:prefs.activityText
+        },{merge:true});
+        await publishDmActivity(document.hidden?'away':'online');
+        close(); toast('共有設定を保存しました');
+      } catch(e){ console.error(e); toast('設定を保存できませんでした'); }
+    }},'設定を保存する')
+  );
+  const close=modal('アクティビティ共有',body);
+}
+function dmActivitySummary(){
+  const parts=[];
+  const p=dmActivity.presence;
+  if(p?.share===true){
+    const labels={online:'オンライン',away:'離席中',busy:'取り込み中',offline:'オフライン'};
+    parts.push(labels[p.status]||'状態不明');
+  }
+  const d=dmActivity.devices;
+  if(d?.share===true) parts.push(d.device==='mobile'?'スマホ':d.device==='pc'?'PC':'端末不明');
+  const a=dmActivity.activities;
+  if(a?.share===true && a.label) parts.push(a.label);
+  const l=dmActivity.lastSeen;
+  if(l?.share===true && l.at) parts.push('最終 '+fmtList(l.at));
+  return parts.join(' ・ ');
+}
+
 /* ---------- room list ---------- */
 function renderRooms(){
   const list = $('#roomList'); if (!list) return;
@@ -1038,9 +1160,10 @@ function openRoom(id){
   renderHeader(); renderRooms();
   document.body.classList.toggle('hide-read', hidingRead()); drawMemoBar(id);
   subscribeMessages(id);
+  if (isDm(rooms[id])) { watchDmActivity(rooms[id]); publishDmActivity(document.hidden?'away':'online'); } else stopDmActivityWatch();
 }
 function closeRoom(){
-  unsubMsgs?.(); unsubMsgs = null; cur = null; pendingRead.clear(); replyTo = null;
+  unsubMsgs?.(); unsubMsgs = null; stopDmActivityWatch(); cur = null; pendingRead.clear(); replyTo = null;
   document.body.classList.remove('in-chat');
   $('#main')?.replaceChildren(welcome());
   renderRooms();
@@ -1051,7 +1174,7 @@ function renderHeader(){
   const typing = Object.entries(r.typing || {}).filter(([u,t]) => u !== me.uid && Date.now() - ms(t) < 4000).map(([u]) => nameOf(u));
   let sub, cls = 's';
   if (typing.length){ sub = typing.join('、') + 'が入力中…'; cls += ' typing'; clearTimeout(typingTimer); typingTimer = setTimeout(renderHeader, 4200); }
-  else if (isDm(r)) sub = isOnline(other) ? 'オンライン' : 'オフライン';
+  else if (isDm(r)) sub = dmActivitySummary() || (isOnline(other) ? 'オンライン' : 'オフライン');
   else sub = (r.members||[]).length + '人のメンバー' + (r.desc ? '・' + r.desc : '');
   head.replaceChildren(
     h('button',{class:'icon-btn back','aria-label':'一覧に戻る',onclick:()=>document.body.classList.remove('in-chat')}, ico('back')),
