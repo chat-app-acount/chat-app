@@ -644,6 +644,7 @@ async function supportModal(){
   const message = h('textarea',{class:'field',rows:'6',maxlength:'3000',placeholder:'内容をできるだけ具体的に入力してください。\n\n※パスワードや認証コードなどは入力しないでください。'});
   const status = h('div',{style:'font-size:12px;color:var(--sub)'},'送信内容はChatSpace運営の管理画面に届きます。');
   const history = h('div',{style:'display:grid;gap:8px'});
+  let sending = false;
   const loadHistory = async()=>{
     history.replaceChildren(h('div',{style:'font-size:12px;color:var(--sub)'},'履歴を読み込み中…'));
     try{
@@ -667,14 +668,15 @@ async function supportModal(){
       const title=subject.value.trim(), text=message.value.trim();
       if(!title) return toast('件名を入力してください');
       if(text.length<5) return toast('内容を5文字以上入力してください');
-      const send=document.querySelector('.support-send-lock');
-      if(send) return;
+      if(sending) return;
+      sending=true;
       status.textContent='送信しています…';
       try{
         await addDoc(collection(db,'reports'),{type:'support',category:category.value,subject:title,text,fromUid:me.uid,byUid:me.uid,roomId:'official',roomName:'ChatSpace公式窓口',ts:serverTimestamp(),status:'open'});
         subject.value='';message.value='';status.textContent='送信しました。運営が確認します。';
         toast('公式窓口に送信しました');await loadHistory();
       }catch(e){console.error(e);status.textContent='送信できませんでした。時間をおいて再度お試しください。';toast('送信できませんでした（Firestoreのルールを確認してください）');}
+      finally{sending=false;}
     }},'運営に送信する'),
     h('div',{class:'support-history-head'},h('b',{},'送信履歴'),h('button',{class:'linklike',onclick:loadHistory},'更新')),
     history
